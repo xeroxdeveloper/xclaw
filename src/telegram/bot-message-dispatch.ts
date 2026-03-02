@@ -158,6 +158,13 @@ export const dispatchTelegramMessage = async ({
     statusReactionController,
   } = context;
 
+  const IS_XCLAW = isXClawMode();
+  const xclawCfg = cfg.xclaw;
+  
+  if (IS_XCLAW && (xclawCfg?.reactionStatuses !== false)) {
+    void statusReactionController.setThinking();
+  }
+
   const draftMaxChars = Math.min(textLimit, 4096);
   const tableMode = resolveMarkdownTableMode({
     cfg,
@@ -380,6 +387,9 @@ export const dispatchTelegramMessage = async ({
       clearHistoryEntriesIfEnabled({ historyMap: groupHistories, historyKey, limit: historyLimit });
     }
   };
+  
+  const silentMode = IS_XCLAW && (xclawCfg?.silentMode !== false);
+
   const deliveryBaseOptions = {
     chatId: String(chatId),
     token: opts.token,
@@ -393,6 +403,7 @@ export const dispatchTelegramMessage = async ({
     chunkMode,
     linkPreview: telegramCfg.linkPreview,
     replyQuoteText,
+    silent: silentMode,
   };
   const applyTextToPayload = (payload: ReplyPayload, text: string): ReplyPayload => {
     if (payload.text === text) {
@@ -401,15 +412,20 @@ export const dispatchTelegramMessage = async ({
     return { ...payload, text };
   };
   const sendPayload = async (payload: ReplyPayload) => {
-    const result = await deliverReplies({
-      ...deliveryBaseOptions,
-      replies: [payload],
-      onVoiceRecording: sendRecordVoice,
-    });
-    if (result.delivered) {
-      deliveryState.markDelivered();
+  const result = await deliverReplies({
+    ...deliveryBaseOptions,
+    replies: [payload],
+    onVoiceRecording: sendRecordVoice,
+  });
+  if (result.delivered) {
+    deliveryState.markDelivered();
+    if (IS_XCLAW && xclawCfg?.autoPin && result.messageIds.length > 0) {
+      const messageId = result.messageIds[result.messageIds.length - 1];
+      void bot.api.pinChatMessage(chatId, messageId, { disable_notification: true }).catch(() => {});
     }
-    return result.delivered;
+  }
+  return result.delivered;
+
   };
   const deliverLaneText = createLaneTextDeliverer({
     lanes,
@@ -466,9 +482,13 @@ export const dispatchTelegramMessage = async ({
         ...prefixOptions,
         typingCallbacks,
         deliver: async (payload, info) => {
-          const previewButtons = (
+          const previewButtonsBase = (
             payload.channelData?.telegram as { buttons?: TelegramInlineButtons } | undefined
           )?.buttons;
+
+          const previewButtons: TelegramInlineButtons | undefined = (IS_XCLAW && info.kind !== "final")
+            ? [[{ text: "🛑 СТОП", callback_data: "/stop" }], ...(previewButtonsBase ?? [])]
+            : previewButtonsBase;
           const split = splitTextIntoLaneSegments(payload.text);
           const segments = split.segments;
           const hasMedia = Boolean(payload.mediaUrl) || (payload.mediaUrls?.length ?? 0) > 0;
@@ -619,6 +639,13 @@ export const dispatchTelegramMessage = async ({
           : undefined,
         onToolStart: statusReactionController
           ? async (payload) => {
+              if (IS_XCLAW && (xclawCfg?.loadingIndicator !== false)) {
+                if (payload.name.includes("image") || payload.name.includes("dalle")) {
+                  await sendChatActionHandler.sendChatAction(chatId, "upload_photo", threadSpec);
+                } else if (payload.name.includes("fetch") || payload.name.includes("browser")) {
+                  await sendChatActionHandler.sendChatAction(chatId, "find_location", threadSpec);
+                }
+              }
               await statusReactionController.setTool(payload.name);
             }
           : undefined,

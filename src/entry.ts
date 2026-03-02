@@ -7,14 +7,18 @@ import { isRootHelpInvocation, isRootVersionInvocation } from "./cli/argv.js";
 import { applyCliProfileEnv, parseCliProfileArgs } from "./cli/profile.js";
 import { shouldSkipRespawnForArgv } from "./cli/respawn-policy.js";
 import { normalizeWindowsArgv } from "./cli/windows-argv.js";
-import { isTruthyEnvValue, normalizeEnv } from "./infra/env.js";
+import { isTruthyEnvValue, normalizeEnv, registerSecretForMasking } from "./infra/env.js";
 import { isMainModule } from "./infra/is-main.js";
 import { installProcessWarningFilter } from "./infra/warning-filter.js";
 import { attachChildProcessBridge } from "./process/child-process-bridge.js";
+import { isXClawMode } from "./xclaw/mode.js";
 
 const ENTRY_WRAPPER_PAIRS = [
   { wrapperBasename: "openclaw.mjs", entryBasename: "entry.js" },
   { wrapperBasename: "openclaw.js", entryBasename: "entry.js" },
+  { wrapperBasename: "xclaw.mjs", entryBasename: "entry.js" },
+  { wrapperBasename: "xlaw", entryBasename: "entry.js" },
+  { wrapperBasename: "xclaw", entryBasename: "entry.js" },
 ] as const;
 
 function shouldForceReadOnlyAuthStore(argv: string[]): boolean {
@@ -27,27 +31,36 @@ function shouldForceReadOnlyAuthStore(argv: string[]): boolean {
   return false;
 }
 
-// Guard: only run entry-point logic when this file is the main module.
-// The bundler may import entry.js as a shared dependency when dist/index.js
-// is the actual entry point; without this guard the top-level code below
-// would call runCli a second time, starting a duplicate gateway that fails
-// on the lock / port and crashes the process.
 if (
   !isMainModule({
     currentFile: fileURLToPath(import.meta.url),
     wrapperEntryPairs: [...ENTRY_WRAPPER_PAIRS],
   })
 ) {
-  // Imported as a dependency — skip all entry-point side effects.
+  // Imported as a dependency
 } else {
-  process.title = "openclaw";
+  const IS_XCLAW = isXClawMode();
+  const CLI_TITLE = IS_XCLAW ? "xlaw" : "openclaw";
+  process.title = CLI_TITLE;
+  
+  if (process.env.TELEGRAM_BOT_TOKEN) {
+    registerSecretForMasking(process.env.TELEGRAM_BOT_TOKEN);
+  }
+  if (process.env.OPENAI_API_KEY) {
+    registerSecretForMasking(process.env.OPENAI_API_KEY);
+  }
+  if (process.env.GEMINI_API_KEY) {
+    registerSecretForMasking(process.env.GEMINI_API_KEY);
+  }
+  
   installProcessWarningFilter();
   normalizeEnv();
+
   if (!isTruthyEnvValue(process.env.NODE_DISABLE_COMPILE_CACHE)) {
     try {
       enableCompileCache();
     } catch {
-      // Best-effort only; never block startup.
+      // ignore
     }
   }
 
@@ -89,9 +102,7 @@ if (
       return false;
     }
 
-    // Respawn guard (and keep recursion bounded if something goes wrong).
     process.env.OPENCLAW_NODE_OPTIONS_READY = "1";
-    // Pass flag as a Node CLI option, not via NODE_OPTIONS (--disable-warning is disallowed in NODE_OPTIONS).
     const child = spawn(
       process.execPath,
       [EXPERIMENTAL_WARNING_FLAG, ...process.execArgv, ...process.argv.slice(1)],
@@ -113,13 +124,12 @@ if (
 
     child.once("error", (error) => {
       console.error(
-        "[openclaw] Failed to respawn CLI:",
+        `[${CLI_TITLE}] Failed to respawn CLI:`,
         error instanceof Error ? (error.stack ?? error.message) : error,
       );
       process.exit(1);
     });
 
-    // Parent must not continue running the CLI.
     return true;
   }
 
@@ -133,7 +143,7 @@ if (
       })
       .catch((error) => {
         console.error(
-          "[openclaw] Failed to resolve version:",
+          `[${CLI_TITLE}] Failed to resolve version:`,
           error instanceof Error ? (error.stack ?? error.message) : error,
         );
         process.exitCode = 1;
@@ -151,7 +161,7 @@ if (
       })
       .catch((error) => {
         console.error(
-          "[openclaw] Failed to display help:",
+          `[${CLI_TITLE}] Failed to display help:`,
           error instanceof Error ? (error.stack ?? error.message) : error,
         );
         process.exitCode = 1;
@@ -164,14 +174,12 @@ if (
   if (!ensureExperimentalWarningSuppressed()) {
     const parsed = parseCliProfileArgs(process.argv);
     if (!parsed.ok) {
-      // Keep it simple; Commander will handle rich help/errors after we strip flags.
-      console.error(`[openclaw] ${parsed.error}`);
+      console.error(`[${CLI_TITLE}] ${parsed.error}`);
       process.exit(2);
     }
 
     if (parsed.profile) {
       applyCliProfileEnv({ profile: parsed.profile });
-      // Keep Commander and ad-hoc argv checks consistent.
       process.argv = parsed.argv;
     }
 
@@ -180,7 +188,7 @@ if (
         .then(({ runCli }) => runCli(process.argv))
         .catch((error) => {
           console.error(
-            "[openclaw] Failed to start CLI:",
+            `[${CLI_TITLE}] Failed to start CLI:`,
             error instanceof Error ? (error.stack ?? error.message) : error,
           );
           process.exitCode = 1;

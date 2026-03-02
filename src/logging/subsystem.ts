@@ -2,6 +2,7 @@ import { Chalk } from "chalk";
 import type { Logger as TsLogger } from "tslog";
 import { CHAT_CHANNEL_ORDER } from "../channels/registry.js";
 import { isVerbose } from "../globals.js";
+import { maskSecrets } from "../infra/env.js";
 import { defaultRuntime, type RuntimeEnv } from "../runtime.js";
 import { clearActiveProgressLine } from "../terminal/progress-line.js";
 import { getConsoleSettings, shouldLogSubsystemToConsole } from "./console.js";
@@ -206,7 +207,7 @@ function formatConsoleLine(opts: {
         : opts.level === "debug" || opts.level === "trace"
           ? color.gray
           : color.cyan;
-  const displayMessage = stripRedundantSubsystemPrefixForConsole(opts.message, displaySubsystem);
+  const displayMessage = maskSecrets(stripRedundantSubsystemPrefixForConsole(opts.message, displaySubsystem));
   const time = (() => {
     if (opts.style === "pretty") {
       return color.gray(new Date().toISOString().slice(11, 19));

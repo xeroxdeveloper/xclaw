@@ -1,0 +1,18 @@
+export type XClawConfig = {
+  /** Enable owner-only response mode. */
+  ownerOnly?: boolean;
+  /** Set the CLI/Bot language (ru/en). */
+  lang?: string;
+  /** Use compact headers in messages. */
+  compactMode?: boolean;
+  /** Show loading spinner/typing in Telegram. */
+  loadingIndicator?: boolean;
+  /** Use reactions for progress status. */
+  reactionStatuses?: boolean;
+  /** Enable automatic context summarization. */
+  autoSummarize?: boolean;
+  /** Self-update from Git on startup (dangerous). */
+  autoUpdate?: boolean;
+  /** List of allowed group IDs. */
+  groupWhitelist?: string[];
+};

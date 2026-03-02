@@ -224,6 +224,7 @@ export function formatControlUiSshHint(params: {
   basePath?: string;
   token?: string;
 }): string {
+  const IS_XCLAW = isXClawMode();
   const basePath = normalizeControlUiBasePath(params.basePath);
   const uiPath = basePath ? `${basePath}/` : "/";
   const localUrl = `http://localhost:${params.port}${uiPath}`;
@@ -232,12 +233,12 @@ export function formatControlUiSshHint(params: {
     : undefined;
   const sshTarget = resolveSshTargetHint();
   return [
-    "No GUI detected. Open from your computer:",
+    IS_XCLAW ? "GUI не обнаружен. Откройте со своего компьютера:" : "No GUI detected. Open from your computer:",
     `ssh -N -L ${params.port}:127.0.0.1:${params.port} ${sshTarget}`,
-    "Then open:",
+    IS_XCLAW ? "Затем откройте:" : "Then open:",
     localUrl,
     authedUrl,
-    "Docs:",
+    IS_XCLAW ? "Документация:" : "Docs:",
     "https://docs.openclaw.ai/gateway/remote",
     "https://docs.openclaw.ai/web/control-ui",
   ]

@@ -2,6 +2,7 @@ import { resolveUserTimezone } from "../agents/date-time.js";
 import { normalizeChatType } from "../channels/chat-type.js";
 import { resolveSenderLabel, type SenderLabelParams } from "../channels/sender-label.js";
 import type { OpenClawConfig } from "../config/config.js";
+import { loadConfig } from "../config/config.js";
 import {
   resolveTimezone,
   formatUtcTimestamp,
@@ -198,6 +199,10 @@ export function formatInboundEnvelope(params: {
   previousTimestamp?: number | Date;
   envelope?: EnvelopeFormatOptions;
 }): string {
+  const cfg = loadConfig();
+  if (cfg.xclaw?.compactMode) {
+    return params.body;
+  }
   const chatType = normalizeChatType(params.chatType);
   const isDirect = !chatType || chatType === "direct";
   const resolvedSenderRaw = params.senderLabel?.trim() || resolveSenderLabel(params.sender ?? {});

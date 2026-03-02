@@ -15,7 +15,8 @@
   },
   "bin": {
     "openclaw": "openclaw.mjs",
-    "xclaw": "xclaw.mjs"
+    "xclaw": "xclaw.mjs",
+    "xlaw": "xclaw.mjs"
   },
   "directories": {
     "doc": "docs",

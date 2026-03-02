@@ -23,6 +23,7 @@ import type {
   TelegramGroupConfig,
   TelegramTopicConfig,
 } from "../config/types.js";
+import { getChildLogger } from "../logging.js";
 import { danger, logVerbose, warn } from "../globals.js";
 import { enqueueSystemEvent } from "../infra/system-events.js";
 import { MediaFetchError } from "../media/fetch.js";
@@ -128,6 +129,22 @@ function isTelegramOwner(senderId: string, allowFrom?: Array<string | number>): 
       .filter(Boolean),
   );
   return normalizedAllow.has(normalizedSenderId.toLowerCase());
+}
+
+const rateLimits = new Map<string, { count: number, resetAt: number }>();
+
+function checkRateLimit(userId: string): boolean {
+  const now = Date.now();
+  const limit = rateLimits.get(userId);
+  if (!limit || now > limit.resetAt) {
+    rateLimits.set(userId, { count: 1, resetAt: now + 60000 });
+    return true;
+  }
+  if (limit.count >= 20) { // 20 messages per minute
+    return false;
+  }
+  limit.count += 1;
+  return true;
 }
 
 export const registerTelegramHandlers = ({
@@ -255,13 +272,22 @@ export const registerTelegramHandlers = ({
         const ownerOnly = IS_XCLAW && process.env.XCLAW_OWNER_ONLY === "1";
 
         if (ownerOnly && !isOwner) {
-          if (last.msg.chat.type === "private") {
-            await withTelegramApiErrorLogging({
-              operation: "sendMessage",
-              runtime,
-              fn: () =>
-                bot.api.sendMessage(last.msg.chat.id, "Бот настроен только для ответов владельцу."),
-            });
+          const ownerIds = Array.from(resolveTelegramOwnerIds());
+          const primaryOwnerId = ownerIds[0] || (Array.isArray(allowFrom) ? String(allowFrom[0]) : "");
+          
+          if (primaryOwnerId && last.msg.chat.type === "private") {
+             // Alert owner
+             await withTelegramApiErrorLogging({
+               operation: "sendMessage",
+               runtime,
+               fn: () => bot.api.sendMessage(primaryOwnerId, `🔔 Попытка доступа: ${last.msg.from?.first_name} (@${last.msg.from?.username || "no_user"}) ID: ${senderId}`),
+             }).catch(() => {});
+             
+             await withTelegramApiErrorLogging({
+               operation: "sendMessage",
+               runtime,
+               fn: () => bot.api.sendMessage(last.msg.chat.id, "Бот настроен только для ответов владельцу. Уведомление отправлено."),
+             });
           }
           return;
         }
@@ -1423,6 +1449,10 @@ export const registerTelegramHandlers = ({
   };
 
   const handleInboundMessageLike = async (event: InboundTelegramEvent) => {
+    if (event.senderId && !checkRateLimit(event.senderId)) {
+      logVerbose(`telegram: rate limit exceeded for ${event.senderId}`);
+      return;
+    }
     try {
       if (shouldSkipUpdate(event.ctxForDedupe)) {
         return;
@@ -1451,6 +1481,12 @@ export const registerTelegramHandlers = ({
         storeAllowFrom,
         dmPolicy,
       });
+
+      const groupWhitelist = xclawCfg?.groupWhitelist;
+      if (isGroup && Array.isArray(groupWhitelist) && !groupWhitelist.includes(String(event.chatId))) {
+        logVerbose(`Blocked telegram group ${event.chatId} (not in whitelist)`);
+        return;
+      }
 
       if (event.requireConfiguredGroup && (!groupConfig || groupConfig.enabled === false)) {
         logVerbose(`Blocked telegram channel ${event.chatId} (channel disabled)`);

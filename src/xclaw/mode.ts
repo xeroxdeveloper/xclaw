@@ -1,11 +1,15 @@
-import { isTruthyEnvValue } from "../infra/env.js";
-
 const XCLAW_MODE_ENV = "OPENCLAW_XCLAW_MODE";
 const XCLAW_PROFILE = "xclaw";
 const ONLY_CHANNELS_ENV = "OPENCLAW_ONLY_CHANNELS";
 const ONLY_MODEL_PROVIDERS_ENV = "OPENCLAW_ONLY_MODEL_PROVIDERS";
 const TELEGRAM_OWNER_IDS_ENV = "OPENCLAW_TELEGRAM_OWNER_IDS";
 const TELEGRAM_NATIVE_COMMANDS_ENV = "OPENCLAW_TELEGRAM_NATIVE_COMMANDS";
+
+function isTruthyValue(value?: string): boolean {
+  if (!value) {return false;}
+  const normalized = value.trim().toLowerCase();
+  return ["true", "1", "yes", "on"].includes(normalized);
+}
 
 function parseCsvSet(raw?: string): Set<string> {
   return new Set(
@@ -17,7 +21,7 @@ function parseCsvSet(raw?: string): Set<string> {
 }
 
 export function isXClawMode(env: NodeJS.ProcessEnv = process.env): boolean {
-  if (isTruthyEnvValue(env[XCLAW_MODE_ENV])) {
+  if (isTruthyValue(env[XCLAW_MODE_ENV])) {
     return true;
   }
   return (env.OPENCLAW_PROFILE ?? "").trim().toLowerCase() === XCLAW_PROFILE;
@@ -81,5 +85,8 @@ export function resolveTelegramNativeCommandAllowlist(
     "models",
     "queue",
     "lang",
+    "xexec",
+    "xupdate",
+    "ghissue",
   ]);
 }

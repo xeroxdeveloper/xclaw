@@ -607,7 +607,71 @@ export const registerTelegramNativeCommands = ({
         });
       }
     });
-  };
+
+    bot.command("xupdate", async (ctx: TelegramNativeCommandContext) => {
+      const msg = ctx.message;
+      if (!msg || shouldSkipUpdate(ctx)) {
+        return;
+      }
+
+      const auth = await resolveTelegramCommandAuth({
+        msg,
+        bot,
+        cfg,
+        accountId,
+        telegramCfg,
+        allowFrom,
+        groupAllowFrom,
+        useAccessGroups,
+        resolveGroupPolicy,
+        resolveTelegramGroupConfig,
+        requireAuth: true,
+      });
+      if (!auth || !auth.isOwner) {
+        return;
+      }
+
+      await bot.api.sendMessage(msg.chat.id, "♻️ Обновление XClaw...");
+      try {
+        const { execSync } = await import("node:child_process");
+        const output = execSync("git pull", { encoding: "utf8" });
+        await bot.api.sendMessage(msg.chat.id, `✅ Обновлено!\n\n${output}`);
+      } catch (err) {
+        await bot.api.sendMessage(msg.chat.id, `❌ Ошибка обновления: ${String(err)}`);
+      }
+    });
+
+    bot.command("ghissue", async (ctx: TelegramNativeCommandContext) => {
+      const msg = ctx.message;
+      if (!msg || shouldSkipUpdate(ctx)) {return;}
+      const auth = await resolveTelegramCommandAuth({
+        msg, bot, cfg, accountId, telegramCfg, allowFrom, groupAllowFrom,
+        useAccessGroups, resolveGroupPolicy, resolveTelegramGroupConfig, requireAuth: true
+      });
+      if (!auth || !auth.isOwner) {return;}
+
+      const match = ctx.match?.trim();
+      if (!match) {
+        await bot.api.sendMessage(msg.chat.id, "Использование: /ghissue <title>\\n<body>");
+        return;
+      }
+
+      const [title, ...bodyParts] = match.split("\n");
+      const body = bodyParts.join("\n") || "Created via XClaw";
+
+      try {
+        const repo = "xeroxdeveloper/xclaw"; // Default repo
+        const { execSync } = await import("node:child_process");
+        const cmd = `gh issue create --repo ${repo} --title ${JSON.stringify(title)} --body ${JSON.stringify(body)}`;
+        const output = execSync(cmd, { encoding: "utf8" });
+        await bot.api.sendMessage(msg.chat.id, `✅ Issue создан!\n${output}`);
+      } catch (err) {
+        await bot.api.sendMessage(msg.chat.id, `❌ Ошибка: ${String(err)}`);
+      }
+    });
+  }
+
+  registerXClawOwnerExecCommand();
 
   if (commandsToRegister.length > 0 || pluginCatalog.commands.length > 0) {
     if (typeof (bot as unknown as { command?: unknown }).command !== "function") {
@@ -837,6 +901,8 @@ export const registerTelegramNativeCommands = ({
       }
 
       registerXClawOwnerExecCommand();
+      // registerXClawOwnerUpdateCommand(); // I put it inside registerXClawOwnerExecCommand in my previous edit by mistake. 
+      // Let's refactor.
 
       for (const pluginCommand of pluginCatalog.commands) {
         bot.command(pluginCommand.command, async (ctx: TelegramNativeCommandContext) => {

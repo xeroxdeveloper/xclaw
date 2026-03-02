@@ -3,6 +3,36 @@ import { parseBooleanValue } from "../utils/boolean.js";
 
 const log = createSubsystemLogger("env");
 const loggedEnv = new Set<string>();
+const knownSecrets = new Set<string>();
+
+export function registerSecretForMasking(secret: string | undefined): void {
+  if (!secret) {return;}
+  const trimmed = secret.trim();
+  if (trimmed.length < 4) {return;}
+  knownSecrets.add(trimmed);
+}
+
+export function maskSecrets(text: string): string {
+  let masked = text;
+  for (const secret of knownSecrets) {
+    const escaped = secret.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const re = new RegExp(escaped, "g");
+    masked = masked.replace(re, "***MASKED***");
+  }
+  return masked;
+}
+
+function formatEnvValue(value: string, redact?: boolean): string {
+  if (redact) {
+    return "<redacted>";
+  }
+  const masked = maskSecrets(value);
+  const singleLine = masked.replace(/\s+/g, " ").trim();
+  if (singleLine.length <= 160) {
+    return singleLine;
+  }
+  return `${singleLine.slice(0, 160)}…`;
+}
 
 type AcceptedEnvOption = {
   key: string;
@@ -10,17 +40,6 @@ type AcceptedEnvOption = {
   value?: string;
   redact?: boolean;
 };
-
-function formatEnvValue(value: string, redact?: boolean): string {
-  if (redact) {
-    return "<redacted>";
-  }
-  const singleLine = value.replace(/\s+/g, " ").trim();
-  if (singleLine.length <= 160) {
-    return singleLine;
-  }
-  return `${singleLine.slice(0, 160)}…`;
-}
 
 export function logAcceptedEnvOption(option: AcceptedEnvOption): void {
   if (process.env.VITEST || process.env.NODE_ENV === "test") {

@@ -1,4 +1,4 @@
-import type { Bot } from "grammy";
+import type { Bot, InlineKeyboardMarkup } from "grammy";
 import { createFinalizableDraftLifecycle } from "../channels/draft-stream-controls.js";
 import { buildTelegramThreadParams, type TelegramThreadSpec } from "./bot/helpers.js";
 
@@ -6,7 +6,7 @@ const TELEGRAM_STREAM_MAX_CHARS = 4096;
 const DEFAULT_THROTTLE_MS = 1000;
 
 export type TelegramDraftStream = {
-  update: (text: string) => void;
+  update: (text: string, buttons?: InlineKeyboardMarkup) => void;
   flush: () => Promise<void>;
   messageId: () => number | undefined;
   clear: () => Promise<void>;
@@ -59,6 +59,8 @@ export function createTelegramDraftStream(params: {
   let streamMessageId: number | undefined;
   let lastSentText = "";
   let lastSentParseMode: "HTML" | undefined;
+  let lastSentButtons: any;
+  let nextButtons: any;
   let generation = 0;
 
   const sendOrEditStreamMessage = async (text: string): Promise<boolean> => {
@@ -73,6 +75,7 @@ export function createTelegramDraftStream(params: {
     const rendered = params.renderText?.(trimmed) ?? { text: trimmed };
     const renderedText = rendered.text.trimEnd();
     const renderedParseMode = rendered.parseMode;
+    const renderedButtons = nextButtons;
     if (!renderedText) {
       return false;
     }
@@ -85,7 +88,11 @@ export function createTelegramDraftStream(params: {
       );
       return false;
     }
-    if (renderedText === lastSentText && renderedParseMode === lastSentParseMode) {
+    if (
+      renderedText === lastSentText &&
+      renderedParseMode === lastSentParseMode &&
+      JSON.stringify(renderedButtons) === JSON.stringify(lastSentButtons)
+    ) {
       return true;
     }
     const sendGeneration = generation;
@@ -99,23 +106,21 @@ export function createTelegramDraftStream(params: {
 
     lastSentText = renderedText;
     lastSentParseMode = renderedParseMode;
+    lastSentButtons = renderedButtons;
     try {
       if (typeof streamMessageId === "number") {
-        if (renderedParseMode) {
-          await params.api.editMessageText(chatId, streamMessageId, renderedText, {
-            parse_mode: renderedParseMode,
-          });
-        } else {
-          await params.api.editMessageText(chatId, streamMessageId, renderedText);
-        }
+        const editParams: Record<string, unknown> = {
+          parse_mode: renderedParseMode,
+          reply_markup: renderedButtons,
+        };
+        await params.api.editMessageText(chatId, streamMessageId, renderedText, editParams);
         return true;
       }
-      const sendParams = renderedParseMode
-        ? {
-            ...replyParams,
-            parse_mode: renderedParseMode,
-          }
-        : replyParams;
+      const sendParams = {
+        ...replyParams,
+        parse_mode: renderedParseMode,
+        reply_markup: renderedButtons,
+      };
       const sent = await params.api.sendMessage(chatId, renderedText, sendParams);
       const sentMessageId = sent?.message_id;
       if (typeof sentMessageId !== "number" || !Number.isFinite(sentMessageId)) {
@@ -143,7 +148,7 @@ export function createTelegramDraftStream(params: {
     }
   };
 
-  const { loop, update, stop, clear } = createFinalizableDraftLifecycle({
+  const { loop, update: updateBase, stop, clear } = createFinalizableDraftLifecycle({
     throttleMs,
     state: streamState,
     sendOrEditStreamMessage,
@@ -162,6 +167,11 @@ export function createTelegramDraftStream(params: {
     warn: params.warn,
     warnPrefix: "telegram stream preview cleanup failed",
   });
+
+  const update = (text: string, buttons?: InlineKeyboardMarkup) => {
+    nextButtons = buttons;
+    updateBase(text);
+  };
 
   const forceNewMessage = () => {
     generation += 1;

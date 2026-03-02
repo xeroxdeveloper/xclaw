@@ -1,10 +1,10 @@
 import path from "node:path";
 import { isXClawMode } from "../xclaw/mode.js";
 
-export const DEFAULT_CLI_NAME = isXClawMode() ? "xclaw" : "openclaw";
+export const DEFAULT_CLI_NAME = isXClawMode() ? "xlaw" : "openclaw";
 
-const KNOWN_CLI_NAMES = new Set(["openclaw", "xclaw"]);
-const CLI_PREFIX_RE = /^(?:((?:pnpm|npm|bunx|npx)\s+))?(openclaw|xclaw)\b/;
+const KNOWN_CLI_NAMES = new Set(["openclaw", "xclaw", "xlaw"]);
+const CLI_PREFIX_RE = /^(?:((?:pnpm|npm|bunx|npx)\s+))?(openclaw|xclaw|xlaw)\b/;
 
 export function resolveCliName(argv: string[] = process.argv): string {
   const argv1 = argv[1];

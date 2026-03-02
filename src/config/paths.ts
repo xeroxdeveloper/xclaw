@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { isXClawMode } from "../xclaw/mode.js";
 import { expandHomePrefix, resolveRequiredHomeDir } from "../infra/home-dir.js";
 import type { OpenClawConfig } from "./types.js";
 
@@ -19,9 +20,25 @@ export const isNixMode = resolveIsNixMode();
 
 // Support historical (and occasionally misspelled) legacy state dirs.
 const LEGACY_STATE_DIRNAMES = [".clawdbot", ".moldbot", ".moltbot"] as const;
-const NEW_STATE_DIRNAME = ".openclaw";
-const CONFIG_FILENAME = "openclaw.json";
-const LEGACY_CONFIG_FILENAMES = ["clawdbot.json", "moldbot.json", "moltbot.json"] as const;
+
+function getNewStateDirname(): string {
+  return isXClawMode() ? ".xclaw" : ".openclaw";
+}
+
+function getConfigFilename(): string {
+  return isXClawMode() ? "xclaw.json" : "openclaw.json";
+}
+
+function getLegacyConfigFilenames(): string[] {
+  return isXClawMode()
+    ? []
+    : ["clawdbot.json", "moldbot.json", "moltbot.json"];
+}
+
+function getLegacyStateDirnames(): string[] {
+  return isXClawMode() ? [] : [...LEGACY_STATE_DIRNAMES];
+}
+
 
 function resolveDefaultHomeDir(): string {
   return resolveRequiredHomeDir(process.env, os.homedir);
@@ -33,11 +50,11 @@ function envHomedir(env: NodeJS.ProcessEnv): () => string {
 }
 
 function legacyStateDirs(homedir: () => string = resolveDefaultHomeDir): string[] {
-  return LEGACY_STATE_DIRNAMES.map((dir) => path.join(homedir(), dir));
+  return getLegacyStateDirnames().map((dir) => path.join(homedir(), dir));
 }
 
 function newStateDir(homedir: () => string = resolveDefaultHomeDir): string {
-  return path.join(homedir(), NEW_STATE_DIRNAME);
+  return path.join(homedir(), getNewStateDirname());
 }
 
 export function resolveLegacyStateDir(homedir: () => string = resolveDefaultHomeDir): string {
@@ -62,7 +79,7 @@ export function resolveStateDir(
   homedir: () => string = envHomedir(env),
 ): string {
   const effectiveHomedir = () => resolveRequiredHomeDir(env, homedir);
-  const override = env.OPENCLAW_STATE_DIR?.trim() || env.CLAWDBOT_STATE_DIR?.trim();
+  const override = env.XCLAW_STATE_DIR?.trim() || env.OPENCLAW_STATE_DIR?.trim() || env.CLAWDBOT_STATE_DIR?.trim();
   if (override) {
     return resolveUserPath(override, env, effectiveHomedir);
   }
@@ -116,11 +133,11 @@ export function resolveCanonicalConfigPath(
   env: NodeJS.ProcessEnv = process.env,
   stateDir: string = resolveStateDir(env, envHomedir(env)),
 ): string {
-  const override = env.OPENCLAW_CONFIG_PATH?.trim() || env.CLAWDBOT_CONFIG_PATH?.trim();
+  const override = env.XCLAW_CONFIG_PATH?.trim() || env.OPENCLAW_CONFIG_PATH?.trim() || env.CLAWDBOT_CONFIG_PATH?.trim();
   if (override) {
     return resolveUserPath(override, env, envHomedir(env));
   }
-  return path.join(stateDir, CONFIG_FILENAME);
+  return path.join(stateDir, getConfigFilename());
 }
 
 /**
@@ -159,8 +176,8 @@ export function resolveConfigPath(
   }
   const stateOverride = env.OPENCLAW_STATE_DIR?.trim();
   const candidates = [
-    path.join(stateDir, CONFIG_FILENAME),
-    ...LEGACY_CONFIG_FILENAMES.map((name) => path.join(stateDir, name)),
+    path.join(stateDir, getConfigFilename()),
+    ...getLegacyConfigFilenames().map((name) => path.join(stateDir, name)),
   ];
   const existing = candidates.find((candidate) => {
     try {
@@ -199,17 +216,17 @@ export function resolveDefaultConfigCandidates(
   }
 
   const candidates: string[] = [];
-  const openclawStateDir = env.OPENCLAW_STATE_DIR?.trim() || env.CLAWDBOT_STATE_DIR?.trim();
+  const openclawStateDir = env.XCLAW_STATE_DIR?.trim() || env.OPENCLAW_STATE_DIR?.trim() || env.CLAWDBOT_STATE_DIR?.trim();
   if (openclawStateDir) {
     const resolved = resolveUserPath(openclawStateDir, env, effectiveHomedir);
-    candidates.push(path.join(resolved, CONFIG_FILENAME));
-    candidates.push(...LEGACY_CONFIG_FILENAMES.map((name) => path.join(resolved, name)));
+    candidates.push(path.join(resolved, getConfigFilename()));
+    candidates.push(...getLegacyConfigFilenames().map((name) => path.join(resolved, name)));
   }
 
   const defaultDirs = [newStateDir(effectiveHomedir), ...legacyStateDirs(effectiveHomedir)];
   for (const dir of defaultDirs) {
-    candidates.push(path.join(dir, CONFIG_FILENAME));
-    candidates.push(...LEGACY_CONFIG_FILENAMES.map((name) => path.join(dir, name)));
+    candidates.push(path.join(dir, getConfigFilename()));
+    candidates.push(...getLegacyConfigFilenames().map((name) => path.join(dir, name)));
   }
   return candidates;
 }
@@ -223,7 +240,8 @@ export const DEFAULT_GATEWAY_PORT = 18789;
 export function resolveGatewayLockDir(tmpdir: () => string = os.tmpdir): string {
   const base = tmpdir();
   const uid = typeof process.getuid === "function" ? process.getuid() : undefined;
-  const suffix = uid != null ? `openclaw-${uid}` : "openclaw";
+  const prefix = isXClawMode() ? "xlaw" : "openclaw";
+  const suffix = uid != null ? `${prefix}-${uid}` : prefix;
   return path.join(base, suffix);
 }
 

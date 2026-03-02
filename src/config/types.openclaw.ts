@@ -26,6 +26,7 @@ import type { PluginsConfig } from "./types.plugins.js";
 import type { SecretsConfig } from "./types.secrets.js";
 import type { SkillsConfig } from "./types.skills.js";
 import type { ToolsConfig } from "./types.tools.js";
+import type { XClawConfig } from "./types.xclaw.js";
 
 export type OpenClawConfig = {
   meta?: {
@@ -112,6 +113,7 @@ export type OpenClawConfig = {
   talk?: TalkConfig;
   gateway?: GatewayConfig;
   memory?: MemoryConfig;
+  xclaw?: XClawConfig;
 };
 
 export type ConfigValidationIssue = {

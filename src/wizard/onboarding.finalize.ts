@@ -2,6 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { DEFAULT_BOOTSTRAP_FILENAME } from "../agents/workspace.js";
 import { formatCliCommand } from "../cli/command-format.js";
+import { isXClawMode } from "../xclaw/mode.js";
 import {
   buildGatewayInstallPlan,
   gatewayInstallErrorHint,
@@ -305,14 +306,19 @@ export async function finalizeOnboardingWizard(
       );
     }
 
+    const IS_XCLAW = isXClawMode();
+    const dirname = IS_XCLAW ? ".xclaw" : ".openclaw";
+    const filename = IS_XCLAW ? "xclaw.json" : "openclaw.json";
+    const envVar = IS_XCLAW ? "XCLAW_GATEWAY_TOKEN" : "OPENCLAW_GATEWAY_TOKEN";
+
     await prompter.note(
       [
         "Gateway token: shared auth for the Gateway + Control UI.",
-        "Stored in: ~/.openclaw/openclaw.json (gateway.auth.token) or OPENCLAW_GATEWAY_TOKEN.",
-        `View token: ${formatCliCommand("openclaw config get gateway.auth.token")}`,
-        `Generate token: ${formatCliCommand("openclaw doctor --generate-gateway-token")}`,
+        `Stored in: ~/${dirname}/${filename} (gateway.auth.token) or ${envVar}.`,
+        `View token: ${formatCliCommand(`${IS_XCLAW ? "xlaw" : "openclaw"} config get gateway.auth.token`)}`,
+        `Generate token: ${formatCliCommand(`${IS_XCLAW ? "xlaw" : "openclaw"} doctor --generate-gateway-token`)}`,
         "Web UI stores a copy in this browser's localStorage (openclaw.control.settings.v1).",
-        `Open the dashboard anytime: ${formatCliCommand("openclaw dashboard --no-open")}`,
+        `Open the dashboard anytime: ${formatCliCommand(`${IS_XCLAW ? "xlaw" : "openclaw"} dashboard --no-open`)}`,
         "If prompted: paste the token into Control UI settings (or use the tokenized dashboard URL).",
       ].join("\n"),
       "Token",

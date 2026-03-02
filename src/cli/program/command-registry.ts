@@ -214,6 +214,19 @@ const coreEntries: CoreCliEntry[] = [
       mod.registerLangCommand(program);
     },
   },
+  {
+    commands: [
+      {
+        name: "xupdate",
+        description: "Обновить XClaw до последней версии",
+        hasSubcommands: false,
+      },
+    ],
+    register: async ({ program }) => {
+      const mod = await import("./register.update.js");
+      mod.registerUpdateCommand(program);
+    },
+  },
 ];
 
 function collectCoreCliCommandNames(predicate?: (command: CoreCliCommandDescriptor) => boolean) {
