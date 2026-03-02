@@ -1,3 +1,5 @@
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 import type { Bot, Context } from "grammy";
 import { resolveChunkMode } from "../auto-reply/chunk.js";
 import type { CommandArgs } from "../auto-reply/commands-registry.js";
@@ -41,6 +43,11 @@ import {
 import { resolveAgentRoute } from "../routing/resolve-route.js";
 import { resolveThreadSessionKeys } from "../routing/session-key.js";
 import type { RuntimeEnv } from "../runtime.js";
+import {
+  isXClawMode,
+  resolveTelegramNativeCommandAllowlist,
+  resolveTelegramOwnerIds,
+} from "../xclaw/mode.js";
 import { withTelegramApiErrorLogging } from "./api-logging.js";
 import { isSenderAllowed, normalizeDmAllowFromWithStore } from "./bot-access.js";
 import type { TelegramMediaRef } from "./bot-message-context.js";
@@ -83,7 +90,49 @@ type TelegramCommandAuthResult = {
   groupConfig?: TelegramGroupConfig;
   topicConfig?: TelegramTopicConfig;
   commandAuthorized: boolean;
+  isOwner: boolean;
 };
+
+const execFileAsync = promisify(execFile);
+const XCLAW_SHELL_OUTPUT_LIMIT = 3800;
+
+function chunkTextByLength(text: string, maxLength = XCLAW_SHELL_OUTPUT_LIMIT): string[] {
+  const chunks: string[] = [];
+  const normalized = String(text ?? "");
+  if (!normalized) {
+    return ["(empty)"];
+  }
+  for (let index = 0; index < normalized.length; index += maxLength) {
+    chunks.push(normalized.slice(index, index + maxLength));
+  }
+  return chunks.length > 0 ? chunks : ["(empty)"];
+}
+
+function isTelegramOwner(senderId: string, allowFrom?: Array<string | number>): boolean {
+  const normalizedSenderId = senderId.trim();
+  if (!normalizedSenderId) {
+    return false;
+  }
+  const ownerIds = resolveTelegramOwnerIds();
+  if (ownerIds.has(normalizedSenderId.toLowerCase())) {
+    return true;
+  }
+  if (!isXClawMode()) {
+    return false;
+  }
+  const normalizedAllow = new Set(
+    (Array.isArray(allowFrom) ? allowFrom : [])
+      .map((entry) =>
+        String(entry)
+          .trim()
+          .toLowerCase()
+          .replace(/^tg:/, "")
+          .replace(/^telegram:/, ""),
+      )
+      .filter(Boolean),
+  );
+  return normalizedAllow.has(normalizedSenderId.toLowerCase());
+}
 
 export type RegisterTelegramHandlerParams = {
   cfg: OpenClawConfig;
@@ -203,6 +252,7 @@ async function resolveTelegramCommandAuth(params: {
   const dmAllowFrom = groupAllowOverride ?? allowFrom;
   const senderId = msg.from?.id ? String(msg.from.id) : "";
   const senderUsername = msg.from?.username ?? "";
+  const isOwner = isTelegramOwner(senderId, allowFrom);
 
   const sendAuthMessage = async (text: string) => {
     await withTelegramApiErrorLogging({
@@ -279,12 +329,13 @@ async function resolveTelegramCommandAuth(params: {
     senderId,
     senderUsername,
   });
-  const commandAuthorized = resolveCommandAuthorizedFromAuthorizers({
+  const commandAuthorizedBase = resolveCommandAuthorizedFromAuthorizers({
     useAccessGroups,
     authorizers: [{ configured: dmAllow.hasEntries, allowed: senderAllowed }],
     modeWhenAccessGroupsOff: "configured",
   });
-  if (requireAuth && !commandAuthorized) {
+  const commandAuthorized = commandAuthorizedBase || isOwner;
+  if (requireAuth && !commandAuthorized && !isOwner) {
     return await rejectNotAuthorized();
   }
 
@@ -298,6 +349,7 @@ async function resolveTelegramCommandAuth(params: {
     groupConfig,
     topicConfig,
     commandAuthorized,
+    isOwner,
   };
 }
 
@@ -329,12 +381,19 @@ export const registerTelegramNativeCommands = ({
     nativeEnabled && nativeSkillsEnabled
       ? listSkillCommandsForAgents(boundAgentIds ? { cfg, agentIds: boundAgentIds } : { cfg })
       : [];
-  const nativeCommands = nativeEnabled
+  const nativeCommandsRaw = nativeEnabled
     ? listNativeCommandSpecsForConfig(cfg, {
         skillCommands,
         provider: "telegram",
       })
     : [];
+  const nativeCommandAllowlist = resolveTelegramNativeCommandAllowlist();
+  const nativeCommands =
+    nativeCommandAllowlist && nativeCommandAllowlist.size > 0
+      ? nativeCommandsRaw.filter((command) =>
+          nativeCommandAllowlist.has(normalizeTelegramCommandName(command.name).toLowerCase()),
+        )
+      : nativeCommandsRaw;
   const reservedCommands = new Set(
     listNativeCommandSpecs().map((command) => normalizeTelegramCommandName(command.name)),
   );
@@ -452,6 +511,103 @@ export const registerTelegramNativeCommands = ({
     chunkMode: params.chunkMode,
     linkPreview: telegramCfg.linkPreview,
   });
+
+  const registerXClawOwnerExecCommand = () => {
+    if (!isXClawMode()) {
+      return;
+    }
+    bot.command("xexec", async (ctx: TelegramNativeCommandContext) => {
+      const msg = ctx.message;
+      if (!msg || shouldSkipUpdate(ctx)) {
+        return;
+      }
+
+      const auth = await resolveTelegramCommandAuth({
+        msg,
+        bot,
+        cfg,
+        accountId,
+        telegramCfg,
+        allowFrom,
+        groupAllowFrom,
+        useAccessGroups,
+        resolveGroupPolicy,
+        resolveTelegramGroupConfig,
+        requireAuth: true,
+      });
+      if (!auth || !auth.isOwner) {
+        await withTelegramApiErrorLogging({
+          operation: "sendMessage",
+          runtime,
+          fn: () => bot.api.sendMessage(msg.chat.id, "Only owner can run /xexec."),
+        });
+        return;
+      }
+
+      const rawCommand = ctx.match?.trim() ?? "";
+      if (!rawCommand) {
+        await withTelegramApiErrorLogging({
+          operation: "sendMessage",
+          runtime,
+          fn: () => bot.api.sendMessage(msg.chat.id, "Usage: /xexec <shell-command>"),
+        });
+        return;
+      }
+
+      const { chatId, isGroup, isForum, resolvedThreadId } = auth;
+      const { threadSpec, mediaLocalRoots, tableMode, chunkMode } = resolveCommandRuntimeContext({
+        msg,
+        isGroup,
+        isForum,
+        resolvedThreadId,
+      });
+      const deliveryBaseOptions = buildCommandDeliveryBaseOptions({
+        chatId,
+        mediaLocalRoots,
+        threadSpec,
+        tableMode,
+        chunkMode,
+      });
+
+      let stdout = "";
+      let stderr = "";
+      let code = 0;
+      try {
+        const result = await execFileAsync("bash", ["-lc", rawCommand], {
+          timeout: 120000,
+          maxBuffer: 1024 * 1024,
+        });
+        stdout = String(result.stdout ?? "");
+        stderr = String(result.stderr ?? "");
+      } catch (err) {
+        const wrapped = err as {
+          stdout?: string;
+          stderr?: string;
+          code?: number;
+          message?: string;
+        };
+        stdout = String(wrapped.stdout ?? "");
+        stderr = String(wrapped.stderr ?? wrapped.message ?? "");
+        code = Number.isFinite(wrapped.code) ? Number(wrapped.code) : 1;
+      }
+
+      const lines = [
+        `$ ${rawCommand}`,
+        "",
+        stdout.trim() ? stdout.trim() : "(no stdout)",
+        stderr.trim() ? `\n[stderr]\n${stderr.trim()}` : "",
+        `\n[exit=${code}]`,
+      ].join("\n");
+
+      const chunks = chunkTextByLength(lines);
+      for (const chunk of chunks) {
+        await deliverReplies({
+          replies: [{ text: chunk }],
+          ...deliveryBaseOptions,
+        });
+      }
+    });
+  };
 
   if (commandsToRegister.length > 0 || pluginCatalog.commands.length > 0) {
     if (typeof (bot as unknown as { command?: unknown }).command !== "function") {
@@ -679,6 +835,8 @@ export const registerTelegramNativeCommands = ({
           }
         });
       }
+
+      registerXClawOwnerExecCommand();
 
       for (const pluginCommand of pluginCatalog.commands) {
         bot.command(pluginCommand.command, async (ctx: TelegramNativeCommandContext) => {

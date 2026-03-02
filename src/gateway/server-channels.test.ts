@@ -101,9 +101,12 @@ function createManager() {
 
 describe("server-channels auto restart", () => {
   let previousRegistry: PluginRegistry | null = null;
+  let previousOnlyChannels: string | undefined;
 
   beforeEach(() => {
     previousRegistry = getActivePluginRegistry();
+    previousOnlyChannels = process.env.OPENCLAW_ONLY_CHANNELS;
+    delete process.env.OPENCLAW_ONLY_CHANNELS;
     vi.useFakeTimers();
     hoisted.computeBackoff.mockClear();
     hoisted.sleepWithAbort.mockClear();
@@ -111,6 +114,11 @@ describe("server-channels auto restart", () => {
 
   afterEach(() => {
     vi.useRealTimers();
+    if (typeof previousOnlyChannels === "string") {
+      process.env.OPENCLAW_ONLY_CHANNELS = previousOnlyChannels;
+    } else {
+      delete process.env.OPENCLAW_ONLY_CHANNELS;
+    }
     setActivePluginRegistry(previousRegistry ?? createEmptyPluginRegistry());
   });
 
@@ -164,5 +172,25 @@ describe("server-channels auto restart", () => {
     const account = snapshot.channelAccounts.discord?.[DEFAULT_ACCOUNT_ID];
     expect(account?.enabled).toBe(true);
     expect(account?.configured).toBe(true);
+  });
+
+  it("skips channel startup when OPENCLAW_ONLY_CHANNELS excludes it", async () => {
+    const startAccount = vi.fn(async () => {});
+    process.env.OPENCLAW_ONLY_CHANNELS = "telegram";
+    installTestRegistry(
+      createTestPlugin({
+        startAccount,
+      }),
+    );
+    const manager = createManager();
+
+    await manager.startChannels();
+
+    expect(startAccount).not.toHaveBeenCalled();
+    const snapshot = manager.getRuntimeSnapshot();
+    const account = snapshot.channelAccounts.discord?.[DEFAULT_ACCOUNT_ID];
+    expect(account?.running).toBe(false);
+    expect(account?.enabled).toBe(true);
+    expect(account?.lastError).toContain("OPENCLAW_ONLY_CHANNELS");
   });
 });

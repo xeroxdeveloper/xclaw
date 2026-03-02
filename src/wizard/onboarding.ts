@@ -15,6 +15,7 @@ import {
 import type { RuntimeEnv } from "../runtime.js";
 import { defaultRuntime } from "../runtime.js";
 import { resolveUserPath } from "../utils.js";
+import { t } from "../xclaw/i18n.js";
 import type { QuickstartGatewayDefaults, WizardFlow } from "./onboarding.types.js";
 import { WizardCancelledError, type WizardPrompter } from "./prompts.js";
 
@@ -26,41 +27,69 @@ async function requireRiskAcknowledgement(params: {
     return;
   }
 
+  const IS_XCLAW = isXClawMode();
   await params.prompter.note(
-    [
-      "Security warning — please read.",
-      "",
-      "OpenClaw is a hobby project and still in beta. Expect sharp edges.",
-      "By default, OpenClaw is a personal agent: one trusted operator boundary.",
-      "This bot can read files and run actions if tools are enabled.",
-      "A bad prompt can trick it into doing unsafe things.",
-      "",
-      "OpenClaw is not a hostile multi-tenant boundary by default.",
-      "If multiple users can message one tool-enabled agent, they share that delegated tool authority.",
-      "",
-      "If you’re not comfortable with security hardening and access control, don’t run OpenClaw.",
-      "Ask someone experienced to help before enabling tools or exposing it to the internet.",
-      "",
-      "Recommended baseline:",
-      "- Pairing/allowlists + mention gating.",
-      "- Multi-user/shared inbox: split trust boundaries (separate gateway/credentials, ideally separate OS users/hosts).",
-      "- Sandbox + least-privilege tools.",
-      "- Shared inboxes: isolate DM sessions (`session.dmScope: per-channel-peer`) and keep tool access minimal.",
-      "- Keep secrets out of the agent’s reachable filesystem.",
-      "- Use the strongest available model for any bot with tools or untrusted inboxes.",
-      "",
-      "Run regularly:",
-      "openclaw security audit --deep",
-      "openclaw security audit --fix",
-      "",
-      "Must read: https://docs.openclaw.ai/gateway/security",
-    ].join("\n"),
-    "Security",
+    IS_XCLAW
+      ? [
+          "Предупреждение о безопасности — пожалуйста, прочтите.",
+          "",
+          "XClaw — это форк OpenClaw, находится в стадии беты. Ожидайте острых углов.",
+          "По умолчанию XClaw — это персональный агент: одна граница доверенного оператора.",
+          "Этот бот может читать файлы и выполнять действия, если включены инструменты.",
+          "Плохой промпт может обманом заставить его делать небезопасные вещи.",
+          "",
+          "XClaw не является враждебной многопользовательской границей по умолчанию.",
+          "Если несколько пользователей могут писать одному агенту с включенными инструментами, они разделяют эти полномочия.",
+          "",
+          "Если вам неуютно с настройкой безопасности и контролем доступа, не запускайте XClaw.",
+          "Попросите кого-нибудь опытного помочь перед включением инструментов или открытием доступа в интернет.",
+          "",
+          "Рекомендуемая база:",
+          "- Привязка/белые списки + фильтрация упоминаний.",
+          "- Многопользовательский/общий ящик: разделение границ доверия.",
+          "- Песочница + инструменты с минимальными привилегиями.",
+          "- Храните секреты вне досягаемости файловой системы агента.",
+          "- Используйте самую сильную доступную модель для любого бота с инструментами.",
+          "",
+          "Запускайте регулярно:",
+          "xclaw security audit --deep",
+          "xclaw security audit --fix",
+        ].join("\n")
+      : [
+          "Security warning — please read.",
+          "",
+          "OpenClaw is a hobby project and still in beta. Expect sharp edges.",
+          "By default, OpenClaw is a personal agent: one trusted operator boundary.",
+          "This bot can read files and run actions if tools are enabled.",
+          "A bad prompt can trick it into doing unsafe things.",
+          "",
+          "OpenClaw is not a hostile multi-tenant boundary by default.",
+          "If multiple users can message one tool-enabled agent, they share that delegated tool authority.",
+          "",
+          "If you’re not comfortable with security hardening and access control, don’t run OpenClaw.",
+          "Ask someone experienced to help before enabling tools or exposing it to the internet.",
+          "",
+          "Recommended baseline:",
+          "- Pairing/allowlists + mention gating.",
+          "- Multi-user/shared inbox: split trust boundaries (separate gateway/credentials, ideally separate OS users/hosts).",
+          "- Sandbox + least-privilege tools.",
+          "- Shared inboxes: isolate DM sessions (`session.dmScope: per-channel-peer`) and keep tool access minimal.",
+          "- Keep secrets out of the agent’s reachable filesystem.",
+          "- Use the strongest available model for any bot with tools or untrusted inboxes.",
+          "",
+          "Run regularly:",
+          "openclaw security audit --deep",
+          "openclaw security audit --fix",
+          "",
+          "Must read: https://docs.openclaw.ai/gateway/security",
+        ].join("\n"),
+    IS_XCLAW ? "Безопасность" : "Security",
   );
 
   const ok = await params.prompter.confirm({
-    message:
-      "I understand this is personal-by-default and shared/multi-user use requires lock-down. Continue?",
+    message: IS_XCLAW
+      ? "Я понимаю, что это персональный инструмент по умолчанию, и совместное использование требует защиты. Продолжить?"
+      : "I understand this is personal-by-default and shared/multi-user use requires lock-down. Continue?",
     initialValue: false,
   });
   if (!ok) {
@@ -74,15 +103,20 @@ export async function runOnboardingWizard(
   prompter: WizardPrompter,
 ) {
   const onboardHelpers = await import("../commands/onboard-helpers.js");
+  const { isXClawMode } = await import("../xclaw/mode.js");
+  const IS_XCLAW = isXClawMode();
   onboardHelpers.printWizardHeader(runtime);
-  await prompter.intro("OpenClaw onboarding");
+  await prompter.intro(IS_XCLAW ? "Настройка XClaw" : "OpenClaw onboarding");
   await requireRiskAcknowledgement({ opts, prompter });
 
   const snapshot = await readConfigFileSnapshot();
   let baseConfig: OpenClawConfig = snapshot.valid ? snapshot.config : {};
 
   if (snapshot.exists && !snapshot.valid) {
-    await prompter.note(onboardHelpers.summarizeExistingConfig(baseConfig), "Invalid config");
+    await prompter.note(
+      onboardHelpers.summarizeExistingConfig(baseConfig),
+      IS_XCLAW ? "Невалидный конфиг" : "Invalid config",
+    );
     if (snapshot.issues.length > 0) {
       await prompter.note(
         [
@@ -90,18 +124,24 @@ export async function runOnboardingWizard(
           "",
           "Docs: https://docs.openclaw.ai/gateway/configuration",
         ].join("\n"),
-        "Config issues",
+        IS_XCLAW ? "Проблемы конфига" : "Config issues",
       );
     }
     await prompter.outro(
-      `Config invalid. Run \`${formatCliCommand("openclaw doctor")}\` to repair it, then re-run onboarding.`,
+      IS_XCLAW
+        ? `Конфиг невалиден. Запустите \`${formatCliCommand("xclaw doctor")}\` для исправления, затем повторите настройку.`
+        : `Config invalid. Run \`${formatCliCommand("openclaw doctor")}\` to repair it, then re-run onboarding.`,
     );
     runtime.exit(1);
     return;
   }
 
-  const quickstartHint = `Configure details later via ${formatCliCommand("openclaw configure")}.`;
-  const manualHint = "Configure port, network, Tailscale, and auth options.";
+  const quickstartHint = IS_XCLAW
+    ? `Настройте детали позже через ${formatCliCommand("xclaw configure")}.`
+    : `Configure details later via ${formatCliCommand("openclaw configure")}.`;
+  const manualHint = IS_XCLAW
+    ? "Настройка порта, сети, Tailscale и параметров аутентификации."
+    : "Configure port, network, Tailscale, and auth options.";
   const explicitFlowRaw = opts.flow?.trim();
   const normalizedExplicitFlow = explicitFlowRaw === "manual" ? "advanced" : explicitFlowRaw;
   if (
@@ -120,18 +160,20 @@ export async function runOnboardingWizard(
   let flow: WizardFlow =
     explicitFlow ??
     (await prompter.select({
-      message: "Onboarding mode",
+      message: t("onboard.mode.message"),
       options: [
-        { value: "quickstart", label: "QuickStart", hint: quickstartHint },
-        { value: "advanced", label: "Manual", hint: manualHint },
+        { value: "quickstart", label: t("onboard.mode.quick"), hint: quickstartHint },
+        { value: "advanced", label: t("onboard.mode.manual"), hint: manualHint },
       ],
       initialValue: "quickstart",
     }));
 
   if (opts.mode === "remote" && flow === "quickstart") {
     await prompter.note(
-      "QuickStart only supports local gateways. Switching to Manual mode.",
-      "QuickStart",
+      IS_XCLAW
+        ? "Быстрый старт поддерживает только локальные шлюзы. Переключение в ручной режим."
+        : "QuickStart only supports local gateways. Switching to Manual mode.",
+      IS_XCLAW ? "Быстрый старт" : "QuickStart",
     );
     flow = "advanced";
   }
@@ -139,15 +181,18 @@ export async function runOnboardingWizard(
   if (snapshot.exists) {
     await prompter.note(
       onboardHelpers.summarizeExistingConfig(baseConfig),
-      "Existing config detected",
+      IS_XCLAW ? "Обнаружен существующий конфиг" : "Existing config detected",
     );
 
     const action = await prompter.select({
-      message: "Config handling",
+      message: IS_XCLAW ? "Работа с конфигом" : "Config handling",
       options: [
-        { value: "keep", label: "Use existing values" },
-        { value: "modify", label: "Update values" },
-        { value: "reset", label: "Reset" },
+        {
+          value: "keep",
+          label: IS_XCLAW ? "Использовать текущие значения" : "Use existing values",
+        },
+        { value: "modify", label: IS_XCLAW ? "Обновить значения" : "Update values" },
+        { value: "reset", label: IS_XCLAW ? "Сбросить" : "Reset" },
       ],
     });
 
@@ -155,16 +200,18 @@ export async function runOnboardingWizard(
       const workspaceDefault =
         baseConfig.agents?.defaults?.workspace ?? onboardHelpers.DEFAULT_WORKSPACE;
       const resetScope = (await prompter.select({
-        message: "Reset scope",
+        message: IS_XCLAW ? "Область сброса" : "Reset scope",
         options: [
-          { value: "config", label: "Config only" },
+          { value: "config", label: IS_XCLAW ? "Только конфиг" : "Config only" },
           {
             value: "config+creds+sessions",
-            label: "Config + creds + sessions",
+            label: IS_XCLAW ? "Конфиг + ключи + сессии" : "Config + creds + sessions",
           },
           {
             value: "full",
-            label: "Full reset (config + creds + sessions + workspace)",
+            label: IS_XCLAW
+              ? "Полный сброс (все данные)"
+              : "Full reset (config + creds + sessions + workspace)",
           },
         ],
       })) as ResetScope;
@@ -227,28 +274,28 @@ export async function runOnboardingWizard(
   if (flow === "quickstart") {
     const formatBind = (value: "loopback" | "lan" | "auto" | "custom" | "tailnet") => {
       if (value === "loopback") {
-        return "Loopback (127.0.0.1)";
+        return IS_XCLAW ? "Локально (127.0.0.1)" : "Loopback (127.0.0.1)";
       }
       if (value === "lan") {
         return "LAN";
       }
       if (value === "custom") {
-        return "Custom IP";
+        return IS_XCLAW ? "Свой IP" : "Custom IP";
       }
       if (value === "tailnet") {
         return "Tailnet (Tailscale IP)";
       }
-      return "Auto";
+      return IS_XCLAW ? "Авто" : "Auto";
     };
     const formatAuth = (value: GatewayAuthChoice) => {
       if (value === "token") {
-        return "Token (default)";
+        return IS_XCLAW ? "Токен (по умолчанию)" : "Token (default)";
       }
-      return "Password";
+      return IS_XCLAW ? "Пароль" : "Password";
     };
     const formatTailscale = (value: "off" | "serve" | "funnel") => {
       if (value === "off") {
-        return "Off";
+        return IS_XCLAW ? "Выкл" : "Off";
       }
       if (value === "serve") {
         return "Serve";
@@ -257,24 +304,28 @@ export async function runOnboardingWizard(
     };
     const quickstartLines = quickstartGateway.hasExisting
       ? [
-          "Keeping your current gateway settings:",
-          `Gateway port: ${quickstartGateway.port}`,
-          `Gateway bind: ${formatBind(quickstartGateway.bind)}`,
+          IS_XCLAW
+            ? "Сохранение текущих настроек шлюза:"
+            : "Keeping your current gateway settings:",
+          `${IS_XCLAW ? "Порт" : "Gateway port"}: ${quickstartGateway.port}`,
+          `${IS_XCLAW ? "Привязка" : "Gateway bind"}: ${formatBind(quickstartGateway.bind)}`,
           ...(quickstartGateway.bind === "custom" && quickstartGateway.customBindHost
-            ? [`Gateway custom IP: ${quickstartGateway.customBindHost}`]
+            ? [
+                `${IS_XCLAW ? "Свой IP шлюза" : "Gateway custom IP"}: ${quickstartGateway.customBindHost}`,
+              ]
             : []),
-          `Gateway auth: ${formatAuth(quickstartGateway.authMode)}`,
-          `Tailscale exposure: ${formatTailscale(quickstartGateway.tailscaleMode)}`,
-          "Direct to chat channels.",
+          `${IS_XCLAW ? "Аутентификация" : "Gateway auth"}: ${formatAuth(quickstartGateway.authMode)}`,
+          `${IS_XCLAW ? "Tailscale" : "Tailscale exposure"}: ${formatTailscale(quickstartGateway.tailscaleMode)}`,
+          IS_XCLAW ? "Переход к настройке каналов." : "Direct to chat channels.",
         ]
       : [
-          `Gateway port: ${DEFAULT_GATEWAY_PORT}`,
-          "Gateway bind: Loopback (127.0.0.1)",
-          "Gateway auth: Token (default)",
-          "Tailscale exposure: Off",
-          "Direct to chat channels.",
+          `${IS_XCLAW ? "Порт шлюза" : "Gateway port"}: ${DEFAULT_GATEWAY_PORT}`,
+          IS_XCLAW ? "Привязка: Локально (127.0.0.1)" : "Gateway bind: Loopback (127.0.0.1)",
+          IS_XCLAW ? "Аутентификация: Токен (по умолчанию)" : "Gateway auth: Token (default)",
+          IS_XCLAW ? "Tailscale: Выкл" : "Tailscale exposure: Off",
+          IS_XCLAW ? "Переход к настройке каналов." : "Direct to chat channels.",
         ];
-    await prompter.note(quickstartLines.join("\n"), "QuickStart");
+    await prompter.note(quickstartLines.join("\n"), IS_XCLAW ? "Быстрый старт" : "QuickStart");
   }
 
   const localPort = resolveGatewayPort(baseConfig);
@@ -297,23 +348,33 @@ export async function runOnboardingWizard(
     (flow === "quickstart"
       ? "local"
       : ((await prompter.select({
-          message: "What do you want to set up?",
+          message: IS_XCLAW ? "Что вы хотите настроить?" : "What do you want to set up?",
           options: [
             {
               value: "local",
-              label: "Local gateway (this machine)",
+              label: IS_XCLAW ? "Локальный шлюз (на этой машине)" : "Local gateway (this machine)",
               hint: localProbe.ok
-                ? `Gateway reachable (${localUrl})`
-                : `No gateway detected (${localUrl})`,
+                ? IS_XCLAW
+                  ? `Шлюз доступен (${localUrl})`
+                  : `Gateway reachable (${localUrl})`
+                : IS_XCLAW
+                  ? `Шлюз не обнаружен (${localUrl})`
+                  : `No gateway detected (${localUrl})`,
             },
             {
               value: "remote",
-              label: "Remote gateway (info-only)",
+              label: IS_XCLAW ? "Удаленный шлюз (только информация)" : "Remote gateway (info-only)",
               hint: !remoteUrl
-                ? "No remote URL configured yet"
+                ? IS_XCLAW
+                  ? "Удаленный URL еще не настроен"
+                  : "No remote URL configured yet"
                 : remoteProbe?.ok
-                  ? `Gateway reachable (${remoteUrl})`
-                  : `Configured but unreachable (${remoteUrl})`,
+                  ? IS_XCLAW
+                    ? `Шлюз доступен (${remoteUrl})`
+                    : `Gateway reachable (${remoteUrl})`
+                  : IS_XCLAW
+                    ? `Настроен, но недоступен (${remoteUrl})`
+                    : `Configured but unreachable (${remoteUrl})`,
             },
           ],
         })) as OnboardMode));
@@ -325,7 +386,7 @@ export async function runOnboardingWizard(
     nextConfig = onboardHelpers.applyWizardMetadata(nextConfig, { command: "onboard", mode });
     await writeConfigFile(nextConfig);
     logConfigUpdated(runtime);
-    await prompter.outro("Remote gateway configured.");
+    await prompter.outro(IS_XCLAW ? "Удаленный шлюз настроен." : "Remote gateway configured.");
     return;
   }
 
@@ -334,7 +395,7 @@ export async function runOnboardingWizard(
     (flow === "quickstart"
       ? (baseConfig.agents?.defaults?.workspace ?? onboardHelpers.DEFAULT_WORKSPACE)
       : await prompter.text({
-          message: "Workspace directory",
+          message: IS_XCLAW ? "Рабочая директория" : "Workspace directory",
           initialValue: baseConfig.agents?.defaults?.workspace ?? onboardHelpers.DEFAULT_WORKSPACE,
         }));
 
@@ -370,7 +431,7 @@ export async function runOnboardingWizard(
       secretInputMode: opts.secretInputMode,
     });
     nextConfig = customResult.config;
-  } else {
+  } else if (authChoice !== "skip") {
     const authResult = await applyAuthChoice({
       authChoice,
       config: nextConfig,
@@ -385,7 +446,7 @@ export async function runOnboardingWizard(
     nextConfig = authResult.config;
   }
 
-  if (authChoiceFromPrompt && authChoice !== "custom-api-key") {
+  if (authChoiceFromPrompt && authChoice !== "custom-api-key" && authChoice !== "skip") {
     const modelSelection = await promptDefaultModel({
       config: nextConfig,
       prompter,
@@ -404,6 +465,21 @@ export async function runOnboardingWizard(
 
   await warnIfModelConfigLooksOff(nextConfig, prompter);
 
+  if (IS_XCLAW) {
+    const ownerOnly = await prompter.confirm({
+      message: "Отвечать только владельцу? (ownerOnly)",
+      initialValue: true,
+    });
+    if (ownerOnly) {
+      process.env.XCLAW_OWNER_ONLY = "1";
+      // We should also persist this in config if possible.
+      if (!nextConfig.xclaw) {
+        nextConfig.xclaw = {};
+      }
+      nextConfig.xclaw.ownerOnly = true;
+    }
+  }
+
   const { configureGatewayForOnboarding } = await import("./onboarding.gateway-config.js");
   const gateway = await configureGatewayForOnboarding({
     flow,
@@ -418,7 +494,10 @@ export async function runOnboardingWizard(
   const settings = gateway.settings;
 
   if (opts.skipChannels ?? opts.skipProviders) {
-    await prompter.note("Skipping channel setup.", "Channels");
+    await prompter.note(
+      IS_XCLAW ? "Пропуск настройки каналов." : "Skipping channel setup.",
+      IS_XCLAW ? "Каналы" : "Channels",
+    );
   } else {
     const { listChannelPlugins } = await import("../channels/plugins/index.js");
     const { setupChannels } = await import("../commands/onboard-channels.js");
@@ -445,7 +524,10 @@ export async function runOnboardingWizard(
   });
 
   if (opts.skipSkills) {
-    await prompter.note("Skipping skills setup.", "Skills");
+    await prompter.note(
+      IS_XCLAW ? "Пропуск настройки навыков." : "Skipping skills setup.",
+      IS_XCLAW ? "Навыки" : "Skills",
+    );
   } else {
     const { setupSkills } = await import("../commands/onboard-skills.js");
     nextConfig = await setupSkills(nextConfig, workspaceDir, runtime, prompter);

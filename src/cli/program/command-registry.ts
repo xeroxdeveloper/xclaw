@@ -1,4 +1,5 @@
 import type { Command } from "commander";
+import { t } from "../../xclaw/i18n.js";
 import { getPrimaryCommand, hasHelpOrVersion } from "../argv.js";
 import { reparseProgramFromActionArgs } from "./action-reparse.js";
 import { removeCommandByName } from "./command-tree.js";
@@ -42,7 +43,7 @@ const coreEntries: CoreCliEntry[] = [
     commands: [
       {
         name: "setup",
-        description: "Initialize local config and agent workspace",
+        description: t("setup.description"),
         hasSubcommands: false,
       },
     ],
@@ -55,7 +56,7 @@ const coreEntries: CoreCliEntry[] = [
     commands: [
       {
         name: "onboard",
-        description: "Interactive onboarding wizard for gateway, workspace, and skills",
+        description: t("onboard.description"),
         hasSubcommands: false,
       },
     ],
@@ -68,8 +69,7 @@ const coreEntries: CoreCliEntry[] = [
     commands: [
       {
         name: "configure",
-        description:
-          "Interactive setup wizard for credentials, channels, gateway, and agent defaults",
+        description: t("configure.description"),
         hasSubcommands: false,
       },
     ],
@@ -82,8 +82,7 @@ const coreEntries: CoreCliEntry[] = [
     commands: [
       {
         name: "config",
-        description:
-          "Non-interactive config helpers (get/set/unset/file/validate). Default: starts setup wizard.",
+        description: t("config.description"),
         hasSubcommands: true,
       },
     ],
@@ -96,22 +95,22 @@ const coreEntries: CoreCliEntry[] = [
     commands: [
       {
         name: "doctor",
-        description: "Health checks + quick fixes for the gateway and channels",
+        description: t("doctor.description"),
         hasSubcommands: false,
       },
       {
         name: "dashboard",
-        description: "Open the Control UI with your current token",
+        description: t("dashboard.description"),
         hasSubcommands: false,
       },
       {
         name: "reset",
-        description: "Reset local config/state (keeps the CLI installed)",
+        description: t("reset.description"),
         hasSubcommands: false,
       },
       {
         name: "uninstall",
-        description: "Uninstall the gateway service + local data (CLI remains)",
+        description: t("uninstall.description"),
         hasSubcommands: false,
       },
     ],
@@ -124,7 +123,7 @@ const coreEntries: CoreCliEntry[] = [
     commands: [
       {
         name: "message",
-        description: "Send, read, and manage messages",
+        description: t("message.description"),
         hasSubcommands: true,
       },
     ],
@@ -137,7 +136,7 @@ const coreEntries: CoreCliEntry[] = [
     commands: [
       {
         name: "memory",
-        description: "Search and reindex memory files",
+        description: t("memory.description"),
         hasSubcommands: true,
       },
     ],
@@ -150,12 +149,12 @@ const coreEntries: CoreCliEntry[] = [
     commands: [
       {
         name: "agent",
-        description: "Run one agent turn via the Gateway",
+        description: t("agent.description"),
         hasSubcommands: false,
       },
       {
         name: "agents",
-        description: "Manage isolated agents (workspaces, auth, routing)",
+        description: t("agents.description"),
         hasSubcommands: true,
       },
     ],
@@ -170,17 +169,17 @@ const coreEntries: CoreCliEntry[] = [
     commands: [
       {
         name: "status",
-        description: "Show channel health and recent session recipients",
+        description: t("status.description"),
         hasSubcommands: false,
       },
       {
         name: "health",
-        description: "Fetch health from the running gateway",
+        description: t("health.description"),
         hasSubcommands: false,
       },
       {
         name: "sessions",
-        description: "List stored conversation sessions",
+        description: t("sessions.description"),
         hasSubcommands: true,
       },
     ],
@@ -193,13 +192,26 @@ const coreEntries: CoreCliEntry[] = [
     commands: [
       {
         name: "browser",
-        description: "Manage OpenClaw's dedicated browser (Chrome/Chromium)",
+        description: t("browser.description"),
         hasSubcommands: true,
       },
     ],
     register: async ({ program }) => {
       const mod = await import("../browser-cli.js");
       mod.registerBrowserCli(program);
+    },
+  },
+  {
+    commands: [
+      {
+        name: "lang",
+        description: t("lang.description"),
+        hasSubcommands: false,
+      },
+    ],
+    register: async ({ program }) => {
+      const mod = await import("./register.lang.js");
+      mod.registerLangCommand(program);
     },
   },
 ];

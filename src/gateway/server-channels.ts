@@ -8,6 +8,7 @@ import { resetDirectoryCache } from "../infra/outbound/target-resolver.js";
 import type { createSubsystemLogger } from "../logging/subsystem.js";
 import { DEFAULT_ACCOUNT_ID } from "../routing/session-key.js";
 import type { RuntimeEnv } from "../runtime.js";
+import { resolveOnlyChannelsFromEnv } from "../xclaw/mode.js";
 
 const CHANNEL_RESTART_POLICY: BackoffPolicy = {
   initialMs: 5_000,
@@ -16,6 +17,7 @@ const CHANNEL_RESTART_POLICY: BackoffPolicy = {
   jitter: 0.1,
 };
 const MAX_RESTART_ATTEMPTS = 10;
+const OPENCLAW_ONLY_CHANNELS_ENV = "OPENCLAW_ONLY_CHANNELS";
 
 export type ChannelRuntimeSnapshot = {
   channels: Partial<Record<ChannelId, ChannelAccountSnapshot>>;
@@ -79,6 +81,13 @@ export type ChannelManager = {
 // Channel docking: lifecycle hooks (`plugin.gateway`) flow through this manager.
 export function createChannelManager(opts: ChannelManagerOptions): ChannelManager {
   const { loadConfig, channelLogs, channelRuntimeEnvs } = opts;
+  const onlyChannels = resolveOnlyChannelsFromEnv();
+  const isChannelAllowed = (channelId: ChannelId): boolean => {
+    if (!onlyChannels) {
+      return true;
+    }
+    return onlyChannels.has(channelId.toLowerCase());
+  };
 
   const channelStores = new Map<ChannelId, ChannelRuntimeStore>();
   // Tracks restart attempts per channel:account. Reset on successful start.
@@ -127,6 +136,22 @@ export function createChannelManager(opts: ChannelManagerOptions): ChannelManage
     }
     const { preserveRestartAttempts = false, preserveManualStop = false } = opts;
     const cfg = loadConfig();
+    if (!isChannelAllowed(channelId)) {
+      const ids = accountId ? [accountId] : plugin.config.listAccountIds(cfg);
+      for (const id of ids) {
+        setRuntime(channelId, id, {
+          accountId: id,
+          enabled: false,
+          configured: true,
+          running: false,
+          lastError: `disabled by ${OPENCLAW_ONLY_CHANNELS_ENV}`,
+        });
+      }
+      channelLogs[channelId].info?.(
+        `channel disabled by ${OPENCLAW_ONLY_CHANNELS_ENV}; skipping startup`,
+      );
+      return;
+    }
     resetDirectoryCache({ channel: channelId, accountId });
     const store = getStore(channelId);
     const accountIds = accountId ? [accountId] : plugin.config.listAccountIds(cfg);

@@ -17,6 +17,7 @@ import { DEFAULT_ACCOUNT_ID, normalizeAccountId } from "../routing/session-key.j
 import type { RuntimeEnv } from "../runtime.js";
 import { formatDocsLink } from "../terminal/links.js";
 import type { WizardPrompter, WizardSelectOption } from "../wizard/prompts.js";
+import { resolveOnlyChannelsFromEnv } from "../xclaw/mode.js";
 import type { ChannelChoice } from "./onboard-types.js";
 import {
   ensureOnboardingPluginInstalled,
@@ -42,6 +43,14 @@ type ChannelStatusSummary = {
   statusByChannel: Map<ChannelChoice, ChannelOnboardingStatus>;
   statusLines: string[];
 };
+
+function isAllowedChannel(channel: ChannelChoice): boolean {
+  const onlyChannels = resolveOnlyChannelsFromEnv();
+  if (!onlyChannels) {
+    return true;
+  }
+  return onlyChannels.has(String(channel).trim().toLowerCase());
+}
 
 function formatAccountLabel(accountId: string): string {
   return accountId === DEFAULT_ACCOUNT_ID ? "default (primary)" : accountId;
@@ -122,16 +131,19 @@ async function collectChannelStatus(params: {
     (entry) => !installedIds.has(entry.id),
   );
   const statusEntries = await Promise.all(
-    listChannelOnboardingAdapters().map((adapter) =>
-      adapter.getStatus({
-        cfg: params.cfg,
-        options: params.options,
-        accountOverrides: params.accountOverrides,
-      }),
-    ),
+    listChannelOnboardingAdapters()
+      .filter((adapter) => isAllowedChannel(adapter.channel))
+      .map((adapter) =>
+        adapter.getStatus({
+          cfg: params.cfg,
+          options: params.options,
+          accountOverrides: params.accountOverrides,
+        }),
+      ),
   );
   const statusByChannel = new Map(statusEntries.map((entry) => [entry.channel, entry]));
   const fallbackStatuses = listChatChannels()
+    .filter((meta) => isAllowedChannel(meta.id))
     .filter((meta) => !statusByChannel.has(meta.id))
     .map((meta) => {
       const configured = isChannelConfigured(params.cfg, meta.id);
@@ -144,13 +156,15 @@ async function collectChannelStatus(params: {
         quickstartScore: 0,
       };
     });
-  const catalogStatuses = catalogEntries.map((entry) => ({
-    channel: entry.id,
-    configured: false,
-    statusLines: [`${entry.meta.label}: install plugin to enable`],
-    selectionHint: "plugin · install",
-    quickstartScore: 0,
-  }));
+  const catalogStatuses = catalogEntries
+    .filter((entry) => isAllowedChannel(entry.id as ChannelChoice))
+    .map((entry) => ({
+      channel: entry.id,
+      configured: false,
+      statusLines: [`${entry.meta.label}: install plugin to enable`],
+      selectionHint: "plugin · install",
+      quickstartScore: 0,
+    }));
   const combinedStatuses = [...statusEntries, ...fallbackStatuses, ...catalogStatuses];
   const mergedStatusByChannel = new Map(combinedStatuses.map((entry) => [entry.channel, entry]));
   const statusLines = combinedStatuses.flatMap((entry) => entry.statusLines);
@@ -321,15 +335,18 @@ export async function setupChannels(
     return cfg;
   }
 
-  const corePrimer = listChatChannels().map((meta) => ({
-    id: meta.id,
-    label: meta.label,
-    blurb: meta.blurb,
-  }));
+  const corePrimer = listChatChannels()
+    .filter((meta) => isAllowedChannel(meta.id))
+    .map((meta) => ({
+      id: meta.id,
+      label: meta.label,
+      blurb: meta.blurb,
+    }));
   const coreIds = new Set(corePrimer.map((entry) => entry.id));
   const primerChannels = [
     ...corePrimer,
     ...installedPlugins
+      .filter((plugin) => isAllowedChannel(plugin.id))
       .filter((plugin) => !coreIds.has(plugin.id))
       .map((plugin) => ({
         id: plugin.id,
@@ -337,6 +354,7 @@ export async function setupChannels(
         blurb: plugin.meta.blurb,
       })),
     ...catalogEntries
+      .filter((entry) => isAllowedChannel(entry.id as ChannelChoice))
       .filter((entry) => !coreIds.has(entry.id as ChannelChoice))
       .map((entry) => ({
         id: entry.id as ChannelChoice,
@@ -410,7 +428,7 @@ export async function setupChannels(
     });
 
   const getChannelEntries = () => {
-    const core = listChatChannels();
+    const core = listChatChannels().filter((meta) => isAllowedChannel(meta.id));
     const installed = listChannelPlugins();
     const installedIds = new Set(installed.map((plugin) => plugin.id));
     const workspaceDir = resolveAgentWorkspaceDir(next, resolveDefaultAgentId(next));
@@ -432,7 +450,7 @@ export async function setupChannels(
     const entries = Array.from(metaById, ([id, meta]) => ({
       id: id as ChannelChoice,
       meta,
-    }));
+    })).filter((entry) => isAllowedChannel(entry.id));
     return {
       entries,
       catalog,

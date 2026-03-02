@@ -26,11 +26,16 @@ import {
 } from "../utils.js";
 import { GATEWAY_CLIENT_MODES, GATEWAY_CLIENT_NAMES } from "../utils/message-channel.js";
 import { VERSION } from "../version.js";
+import { isXClawMode } from "../xclaw/mode.js";
 import type { NodeManagerChoice, OnboardMode, ResetScope } from "./onboard-types.js";
 
 export function guardCancel<T>(value: T | symbol, runtime: RuntimeEnv): T {
   if (isCancel(value)) {
-    cancel(stylePromptTitle("Setup cancelled.") ?? "Setup cancelled.");
+    const IS_XCLAW = isXClawMode();
+    cancel(
+      stylePromptTitle(IS_XCLAW ? "Настройка отменена." : "Setup cancelled.") ??
+        (IS_XCLAW ? "Настройка отменена." : "Setup cancelled."),
+    );
     runtime.exit(0);
     throw new Error("unreachable");
   }
@@ -38,15 +43,20 @@ export function guardCancel<T>(value: T | symbol, runtime: RuntimeEnv): T {
 }
 
 export function summarizeExistingConfig(config: OpenClawConfig): string {
+  const IS_XCLAW = isXClawMode();
   const rows: string[] = [];
   const defaults = config.agents?.defaults;
   if (defaults?.workspace) {
-    rows.push(shortenHomeInString(`workspace: ${defaults.workspace}`));
+    rows.push(
+      shortenHomeInString(
+        `${IS_XCLAW ? "рабочая директория" : "workspace"}: ${defaults.workspace}`,
+      ),
+    );
   }
   if (defaults?.model) {
     const model = resolveAgentModelPrimaryValue(defaults.model);
     if (model) {
-      rows.push(shortenHomeInString(`model: ${model}`));
+      rows.push(shortenHomeInString(`${IS_XCLAW ? "модель" : "model"}: ${model}`));
     }
   }
   if (config.gateway?.mode) {
@@ -64,7 +74,11 @@ export function summarizeExistingConfig(config: OpenClawConfig): string {
   if (config.skills?.install?.nodeManager) {
     rows.push(shortenHomeInString(`skills.nodeManager: ${config.skills.install.nodeManager}`));
   }
-  return rows.length ? rows.join("\n") : "No key settings detected.";
+  return rows.length
+    ? rows.join("\n")
+    : IS_XCLAW
+      ? "Настройки не обнаружены."
+      : "No key settings detected.";
 }
 
 export function randomToken(): string {
@@ -99,13 +113,16 @@ export function validateGatewayPasswordInput(value: unknown): string | undefined
 }
 
 export function printWizardHeader(runtime: RuntimeEnv) {
+  const IS_XCLAW = isXClawMode();
   const header = [
     "▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄",
     "██░▄▄▄░██░▄▄░██░▄▄▄██░▀██░██░▄▄▀██░████░▄▄▀██░███░██",
     "██░███░██░▀▀░██░▄▄▄██░█░█░██░█████░████░▀▀░██░█░█░██",
     "██░▀▀▀░██░█████░▀▀▀██░██▄░██░▀▀▄██░▀▀░█░██░██▄▀▄▀▄██",
     "▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀",
-    "                  🦞 OPENCLAW 🦞                    ",
+    IS_XCLAW
+      ? "                    🦞 XCLAW 🦞                     "
+      : "                  🦞 OPENCLAW 🦞                    ",
     " ",
   ].join("\n");
   runtime.log(header);

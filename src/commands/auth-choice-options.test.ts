@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import type { AuthProfileStore } from "../agents/auth-profiles.js";
 import {
   buildAuthChoiceGroups,
@@ -16,6 +16,16 @@ function getOptions(includeSkip = false) {
 }
 
 describe("buildAuthChoiceOptions", () => {
+  const previousXClawMode = process.env.OPENCLAW_XCLAW_MODE;
+
+  afterEach(() => {
+    if (typeof previousXClawMode === "string") {
+      process.env.OPENCLAW_XCLAW_MODE = previousXClawMode;
+    } else {
+      delete process.env.OPENCLAW_XCLAW_MODE;
+    }
+  });
+
   it("includes core and provider-specific auth choices", () => {
     const options = getOptions();
 
@@ -79,5 +89,19 @@ describe("buildAuthChoiceOptions", () => {
 
     expect(chutesGroup).toBeDefined();
     expect(chutesGroup?.options.some((opt) => opt.value === "chutes")).toBe(true);
+  });
+
+  it("limits auth choices to OpenAI and Gemini in xclaw mode", () => {
+    process.env.OPENCLAW_XCLAW_MODE = "1";
+
+    const options = getOptions();
+    const values = options.map((entry) => entry.value);
+    expect(values).toEqual(["openai-api-key", "gemini-api-key"]);
+
+    const { groups } = buildAuthChoiceGroups({
+      store: EMPTY_STORE,
+      includeSkip: false,
+    });
+    expect(groups.map((group) => group.value)).toEqual(["openai", "google"]);
   });
 });

@@ -1,4 +1,5 @@
 import type { AuthProfileStore } from "../agents/auth-profiles.js";
+import { isXClawMode } from "../xclaw/mode.js";
 import { AUTH_CHOICE_LEGACY_ALIASES_FOR_CLI } from "./auth-choice-legacy.js";
 import { ONBOARD_PROVIDER_AUTH_FLAGS } from "./onboard-provider-auth-flags.js";
 import type { AuthChoice, AuthChoiceGroupId } from "./onboard-types.js";
@@ -323,7 +324,15 @@ export function buildAuthChoiceOptions(params: {
   includeSkip: boolean;
 }): AuthChoiceOption[] {
   void params.store;
-  const options: AuthChoiceOption[] = [...BASE_AUTH_CHOICE_OPTIONS];
+  const options: AuthChoiceOption[] = isXClawMode()
+    ? Array.from(
+        new Map(
+          BASE_AUTH_CHOICE_OPTIONS.filter(
+            (entry) => entry.value === "openai-api-key" || entry.value === "gemini-api-key",
+          ).map((entry) => [entry.value, entry]),
+        ).values(),
+      )
+    : [...BASE_AUTH_CHOICE_OPTIONS];
 
   if (params.includeSkip) {
     options.push({ value: "skip", label: "Skip for now" });
@@ -351,9 +360,13 @@ export function buildAuthChoiceGroups(params: { store: AuthProfileStore; include
       .filter((opt): opt is AuthChoiceOption => Boolean(opt)),
   }));
 
+  const filteredGroups = isXClawMode()
+    ? groups.filter((group) => group.value === "openai" || group.value === "google")
+    : groups;
+
   const skipOption = params.includeSkip
     ? ({ value: "skip", label: "Skip for now" } satisfies AuthChoiceOption)
     : undefined;
 
-  return { groups, skipOption };
+  return { groups: filteredGroups, skipOption };
 }

@@ -29,6 +29,7 @@ import { MediaFetchError } from "../media/fetch.js";
 import { readChannelAllowFromStore } from "../pairing/pairing-store.js";
 import { resolveAgentRoute } from "../routing/resolve-route.js";
 import { resolveThreadSessionKeys } from "../routing/session-key.js";
+import { isXClawMode, resolveTelegramOwnerIds } from "../xclaw/mode.js";
 import { withTelegramApiErrorLogging } from "./api-logging.js";
 import {
   isSenderAllowed,
@@ -101,6 +102,32 @@ function resolveInboundMediaFileId(msg: Message): string | undefined {
     msg.audio?.file_id ??
     msg.voice?.file_id
   );
+}
+
+function isTelegramOwner(senderId: string, allowFrom?: Array<string | number>): boolean {
+  const normalizedSenderId = senderId.trim();
+  if (!normalizedSenderId) {
+    return false;
+  }
+  const ownerIds = resolveTelegramOwnerIds();
+  if (ownerIds.has(normalizedSenderId.toLowerCase())) {
+    return true;
+  }
+  if (!isXClawMode()) {
+    return false;
+  }
+  const normalizedAllow = new Set(
+    (Array.isArray(allowFrom) ? allowFrom : [])
+      .map((entry) =>
+        String(entry)
+          .trim()
+          .toLowerCase()
+          .replace(/^tg:/, "")
+          .replace(/^telegram:/, ""),
+      )
+      .filter(Boolean),
+  );
+  return normalizedAllow.has(normalizedSenderId.toLowerCase());
 }
 
 export const registerTelegramHandlers = ({
@@ -221,6 +248,24 @@ export const registerTelegramHandlers = ({
       }
       if (entries.length === 1) {
         const replyMedia = await resolveReplyMediaForMessage(last.ctx, last.msg);
+
+        const IS_XCLAW = isXClawMode();
+        const senderId = last.msg.from?.id ? String(last.msg.from.id) : "";
+        const isOwner = isTelegramOwner(senderId, allowFrom);
+        const ownerOnly = IS_XCLAW && process.env.XCLAW_OWNER_ONLY === "1";
+
+        if (ownerOnly && !isOwner) {
+          if (last.msg.chat.type === "private") {
+            await withTelegramApiErrorLogging({
+              operation: "sendMessage",
+              runtime,
+              fn: () =>
+                bot.api.sendMessage(last.msg.chat.id, "Бот настроен только для ответов владельцу."),
+            });
+          }
+          return;
+        }
+
         await processMessage(last.ctx, last.allMedia, last.storeAllowFrom, undefined, replyMedia);
         return;
       }
@@ -242,6 +287,24 @@ export const registerTelegramHandlers = ({
       const messageIdOverride = last.msg.message_id ? String(last.msg.message_id) : undefined;
       const syntheticCtx = buildSyntheticContext(baseCtx, syntheticMessage);
       const replyMedia = await resolveReplyMediaForMessage(baseCtx, syntheticMessage);
+
+      const IS_XCLAW = isXClawMode();
+      const senderId = last.msg.from?.id ? String(last.msg.from.id) : "";
+      const isOwner = isTelegramOwner(senderId, allowFrom);
+      const ownerOnly = IS_XCLAW && process.env.XCLAW_OWNER_ONLY === "1";
+
+      if (ownerOnly && !isOwner) {
+        if (last.msg.chat.type === "private") {
+          await withTelegramApiErrorLogging({
+            operation: "sendMessage",
+            runtime,
+            fn: () =>
+              bot.api.sendMessage(last.msg.chat.id, "Бот настроен только для ответов владельцу."),
+          });
+        }
+        return;
+      }
+
       await processMessage(
         syntheticCtx,
         combinedMedia,

@@ -17,6 +17,11 @@ import {
 } from "../shared/avatar-policy.js";
 import { isCanonicalDottedDecimalIPv4, isLoopbackIpAddress } from "../shared/net/ip.js";
 import { isRecord } from "../utils.js";
+import {
+  isXClawMode,
+  resolveOnlyChannelsFromEnv,
+  resolveOnlyModelProvidersFromEnv,
+} from "../xclaw/mode.js";
 import { findDuplicateAgentDirs, formatDuplicateAgentDirError } from "./agent-dirs.js";
 import { applyAgentDefaults, applyModelDefaults, applySessionDefaults } from "./defaults.js";
 import { findLegacyConfigIssues } from "./legacy.js";
@@ -108,6 +113,126 @@ function validateGatewayTailscaleBind(config: OpenClawConfig): ConfigValidationI
   ];
 }
 
+function resolveExplicitModelProvider(modelRef: string | undefined): string | null {
+  const trimmed = String(modelRef ?? "").trim();
+  if (!trimmed) {
+    return null;
+  }
+  const slashIndex = trimmed.indexOf("/");
+  if (slashIndex <= 0) {
+    return null;
+  }
+  return trimmed.slice(0, slashIndex).trim().toLowerCase() || null;
+}
+
+function validateXClawModeRestrictions(config: OpenClawConfig): ConfigValidationIssue[] {
+  if (!isXClawMode()) {
+    return [];
+  }
+  const issues: ConfigValidationIssue[] = [];
+
+  const onlyChannels = resolveOnlyChannelsFromEnv();
+  if (onlyChannels) {
+    if (isRecord(config.channels)) {
+      for (const key of Object.keys(config.channels)) {
+        if (key === "defaults" || key === "modelByChannel") {
+          continue;
+        }
+        if (!onlyChannels.has(key.trim().toLowerCase())) {
+          issues.push({
+            path: `channels.${key}`,
+            message: `xclaw mode allows only channels: ${Array.from(onlyChannels).join(", ")}`,
+          });
+        }
+      }
+    }
+
+    const modelByChannel = config.channels?.modelByChannel;
+    if (isRecord(modelByChannel)) {
+      for (const key of Object.keys(modelByChannel)) {
+        if (!onlyChannels.has(key.trim().toLowerCase())) {
+          issues.push({
+            path: `channels.modelByChannel.${key}`,
+            message: `xclaw mode allows modelByChannel only for: ${Array.from(onlyChannels).join(", ")}`,
+          });
+        }
+      }
+    }
+  }
+
+  const onlyProviders = resolveOnlyModelProvidersFromEnv();
+  if (!onlyProviders) {
+    return issues;
+  }
+
+  const providers = config.models?.providers;
+  if (isRecord(providers)) {
+    for (const key of Object.keys(providers)) {
+      if (!onlyProviders.has(key.trim().toLowerCase())) {
+        issues.push({
+          path: `models.providers.${key}`,
+          message: `xclaw mode allows only model providers: ${Array.from(onlyProviders).join(", ")}`,
+        });
+      }
+    }
+  }
+
+  const validateModelRefProvider = (modelRef: string | undefined, path: string) => {
+    const provider = resolveExplicitModelProvider(modelRef);
+    if (!provider) {
+      return;
+    }
+    if (!onlyProviders.has(provider)) {
+      issues.push({
+        path,
+        message: `xclaw mode allows only model providers: ${Array.from(onlyProviders).join(", ")}`,
+      });
+    }
+  };
+
+  const defaultsModel = config.agents?.defaults?.model;
+  if (typeof defaultsModel === "string") {
+    validateModelRefProvider(defaultsModel, "agents.defaults.model");
+  } else if (isRecord(defaultsModel)) {
+    validateModelRefProvider(
+      typeof defaultsModel.primary === "string" ? defaultsModel.primary : undefined,
+      "agents.defaults.model.primary",
+    );
+    const fallbacks = Array.isArray(defaultsModel.fallbacks) ? defaultsModel.fallbacks : [];
+    for (let index = 0; index < fallbacks.length; index += 1) {
+      validateModelRefProvider(
+        typeof fallbacks[index] === "string" ? fallbacks[index] : undefined,
+        `agents.defaults.model.fallbacks.${index}`,
+      );
+    }
+  }
+
+  const agentList = Array.isArray(config.agents?.list) ? config.agents.list : [];
+  for (let index = 0; index < agentList.length; index += 1) {
+    const agentModel = agentList[index]?.model;
+    if (typeof agentModel === "string") {
+      validateModelRefProvider(agentModel, `agents.list.${index}.model`);
+      continue;
+    }
+    if (!isRecord(agentModel)) {
+      continue;
+    }
+    validateModelRefProvider(
+      typeof agentModel.primary === "string" ? agentModel.primary : undefined,
+      `agents.list.${index}.model.primary`,
+    );
+    const fallbacks = Array.isArray(agentModel.fallbacks) ? agentModel.fallbacks : [];
+    for (let fallbackIndex = 0; fallbackIndex < fallbacks.length; fallbackIndex += 1) {
+      validateModelRefProvider(
+        typeof fallbacks[fallbackIndex] === "string" ? fallbacks[fallbackIndex] : undefined,
+        `agents.list.${index}.model.fallbacks.${fallbackIndex}`,
+      );
+    }
+  }
+
+  return issues;
+}
+
 /**
  * Validates config without applying runtime defaults.
  * Use this when you need the raw validated config (e.g., for writing back to file).
@@ -154,6 +279,10 @@ export function validateConfigObjectRaw(
   const gatewayTailscaleBindIssues = validateGatewayTailscaleBind(validated.data as OpenClawConfig);
   if (gatewayTailscaleBindIssues.length > 0) {
     return { ok: false, issues: gatewayTailscaleBindIssues };
+  }
+  const xclawIssues = validateXClawModeRestrictions(validated.data as OpenClawConfig);
+  if (xclawIssues.length > 0) {
+    return { ok: false, issues: xclawIssues };
   }
   return {
     ok: true,

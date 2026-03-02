@@ -1,0 +1,47 @@
+{
+  channels: {
+    telegram: {
+      enabled: true,
+      botToken: "PASTE_BOTFATHER_TOKEN",
+      dmPolicy: "allowlist",
+      allowFrom: ["tg:PASTE_OWNER_TELEGRAM_ID"],
+      groupPolicy: "open",
+      groups: {
+        "*": {
+          requireMention: false,
+          enabled: true,
+          groupPolicy: "open",
+        },
+      },
+      commands: { native: "auto" },
+      customCommands: [
+        { command: "owner", description: "Owner controls" },
+        { command: "files", description: "Send files/photos" },
+      ],
+      actions: {
+        sendMessage: true,
+        editMessage: true,
+        deleteMessage: true,
+        reactions: true,
+        sticker: true,
+      },
+      reactionNotifications: "all",
+      replyToMode: "all",
+      linkPreview: true,
+      streaming: "partial",
+      historyLimit: 200,
+      dmHistoryLimit: 200,
+    },
+  },
+  models: {
+    defaults: {
+      chat: "gemini/gemini-2.5-pro",
+      image: "openai/gpt-image-1",
+    },
+  },
+  agents: {
+    defaults: {
+      model: "gemini/gemini-2.5-pro",
+    },
+  },
+}

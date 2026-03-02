@@ -1,5 +1,6 @@
 import type { AuthProfileStore } from "../agents/auth-profiles.js";
 import type { WizardPrompter } from "../wizard/prompts.js";
+import { t } from "../xclaw/i18n.js";
 import { buildAuthChoiceGroups } from "./auth-choice-options.js";
 import type { AuthChoice } from "./onboard-types.js";
 
@@ -20,11 +21,11 @@ export async function promptAuthChoiceGrouped(params: {
         label: group.label,
         hint: group.hint,
       })),
-      ...(skipOption ? [skipOption] : []),
+      ...(skipOption ? [{ ...skipOption, label: t("auth.skip") }] : []),
     ];
 
     const providerSelection = (await params.prompter.select({
-      message: "Model/auth provider",
+      message: t("auth.choice.message"),
       options: providerOptions,
     })) as string;
 
@@ -47,8 +48,8 @@ export async function promptAuthChoiceGrouped(params: {
     }
 
     const methodSelection = await params.prompter.select({
-      message: `${group.label} auth method`,
-      options: [...group.options, { value: BACK_VALUE, label: "Back" }],
+      message: t("auth.method.message", { label: group.label }),
+      options: [...group.options, { value: BACK_VALUE, label: t("auth.back") }],
     });
 
     if (methodSelection === BACK_VALUE) {
