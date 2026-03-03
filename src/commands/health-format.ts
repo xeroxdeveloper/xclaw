@@ -1,4 +1,4 @@
-import { IS_XCLAW_MODE, isXClawMode, resolveTelegramNativeCommandAllowlist, resolveTelegramOwnerIds } from "../xclaw/mode.js";
+import { IS_XCLAW_MODE, isXClawMode, resolveOnlyChannelsFromEnv, resolveOnlyModelProvidersFromEnv, resolveTelegramNativeCommandAllowlist, resolveTelegramOwnerIds } from "../xclaw/mode.js";
 import { colorize, isRich, theme } from "../terminal/theme.js";
 
 const formatKv = (line: string, rich: boolean) => {

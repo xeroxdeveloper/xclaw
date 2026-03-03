@@ -7,7 +7,7 @@ import { resolveHeartbeatSenderContext } from "../infra/outbound/targets.js";
 import { createSubsystemLogger } from "../logging/subsystem.js";
 import { CommandLane } from "../process/lanes.js";
 import { defaultRuntime } from "../runtime.js";
-import { IS_XCLAW_MODE } from "./mode.js";
+import { IS_XCLAW_MODE, isXClawMode } from "./mode.js";
 
 const log = createSubsystemLogger("xclaw/autonomous");
 

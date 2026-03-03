@@ -1,4 +1,4 @@
-import { IS_XCLAW_MODE, isXClawMode, resolveTelegramNativeCommandAllowlist, resolveTelegramOwnerIds } from "../xclaw/mode.js";
+import { IS_XCLAW_MODE, isXClawMode, resolveOnlyChannelsFromEnv, resolveOnlyModelProvidersFromEnv, resolveTelegramNativeCommandAllowlist, resolveTelegramOwnerIds } from "../xclaw/mode.js";
 import fs from "node:fs";
 import { resolveContextTokensForModel } from "../agents/context.js";
 import { DEFAULT_CONTEXT_TOKENS, DEFAULT_MODEL, DEFAULT_PROVIDER } from "../agents/defaults.js";
@@ -733,9 +733,6 @@ function groupCommandsByCategory(
   }
   return grouped;
 }
-
-
-// ... (skipping some imports)
 
 export function buildHelpMessage(cfg?: OpenClawConfig): string {
   const IS_XCLAW = IS_XCLAW_MODE;

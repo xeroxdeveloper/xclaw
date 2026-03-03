@@ -1,4 +1,4 @@
-import { IS_XCLAW_MODE, isXClawMode, resolveTelegramNativeCommandAllowlist, resolveTelegramOwnerIds } from "../xclaw/mode.js";
+import { IS_XCLAW_MODE, isXClawMode, resolveOnlyChannelsFromEnv, resolveOnlyModelProvidersFromEnv, resolveTelegramNativeCommandAllowlist, resolveTelegramOwnerIds } from "../xclaw/mode.js";
 
 // Lobster palette tokens for CLI/UI theming. "lobster seam" == use this palette.
 // Keep in sync with docs/cli/index.md (CLI palette section).

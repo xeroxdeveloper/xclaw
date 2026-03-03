@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { IS_XCLAW_MODE, isXClawMode, resolveTelegramNativeCommandAllowlist, resolveTelegramOwnerIds } from "./xclaw/mode.js";
+import { IS_XCLAW_MODE, isXClawMode } from "./xclaw/mode.js";
 import { spawn } from "node:child_process";
 import { enableCompileCache } from "node:module";
 import process from "node:process";
@@ -19,7 +19,6 @@ const ENTRY_WRAPPER_PAIRS = [
   { wrapperBasename: "xclaw.mjs", entryBasename: "entry.js" },
   { wrapperBasename: "xclaw", entryBasename: "entry.js" },
 ] as const;
-
 
 function shouldForceReadOnlyAuthStore(argv: string[]): boolean {
   const tokens = argv.slice(2).filter((token) => token.length > 0 && !token.startsWith("-"));

@@ -1,4 +1,4 @@
-import { IS_XCLAW_MODE, isXClawMode, resolveTelegramNativeCommandAllowlist, resolveTelegramOwnerIds } from "../xclaw/mode.js";
+import { IS_XCLAW_MODE, isXClawMode, resolveOnlyChannelsFromEnv, resolveOnlyModelProvidersFromEnv, resolveTelegramNativeCommandAllowlist, resolveTelegramOwnerIds } from "../xclaw/mode.js";
 import type { Message, ReactionTypeEmoji } from "@grammyjs/types";
 import { resolveAgentDir, resolveDefaultAgentId } from "../agents/agent-scope.js";
 import { hasControlCommand } from "../auto-reply/command-detection.js";
@@ -776,10 +776,40 @@ export const registerTelegramHandlers = ({
       const { dmPolicy, resolvedThreadId, dmThreadId, storeAllowFrom, groupConfig, topicConfig, effectiveGroupAllow, hasGroupAllowOverride } = context;
 
       const xclawCfg = cfg.xclaw;
-      const groupWhitelist = xclawCfg?.groupWhitelist;
-      if (event.isGroup && Array.isArray(groupWhitelist) && !groupWhitelist.includes(String(event.chatId))) {
-        if (isXClawMode()) logVerbose(`[XClaw] Blocked group ${event.chatId} - not in whitelist`);
-        return;
+      const groupWhitelist = xclawCfg?.groupWhitelist || [];
+      const isWhitelisted = Array.isArray(groupWhitelist) && groupWhitelist.includes(String(event.chatId));
+      
+      const isReplyToBot = event.msg.reply_to_message?.from?.id === event.ctx.me.id;
+      const isOwnerCheck = isTelegramOwner(event.senderId, cfg);
+
+      if (event.isGroup && !isWhitelisted) {
+        if (isXClawMode()) {
+          logVerbose(`[XClaw] Group ${event.chatId} is not in whitelist.`);
+          
+          if (isReplyToBot || isOwnerCheck) {
+             const ownerIds = Array.from(resolveTelegramOwnerIds());
+             const primaryOwnerId = ownerIds[0] || (Array.isArray(allowFrom) ? String(allowFrom[0]) : "");
+             
+             if (primaryOwnerId) {
+                await withTelegramApiErrorLogging({
+                  operation: "sendMessage",
+                  runtime,
+                  fn: () => bot.api.sendMessage(primaryOwnerId, `👥 <b>Запрос доступа для группы</b>\nНазвание: <i>${event.msg.chat.title}</i>\nID: <code>${event.chatId}</code>\nОтправитель: ${event.msg.from?.first_name} (@${event.msg.from?.username || "no_user"})`, {
+                    reply_markup: {
+                      inline_keyboard: [[
+                        { text: "✅ Разрешить группу", callback_data: `xclaw_allowgroup_${event.chatId}` },
+                        { text: "❌ Отклонить", callback_data: `xclaw_denygroup_${event.chatId}` }
+                      ]]
+                    },
+                    parse_mode: "HTML"
+                  }),
+                }).catch(() => {});
+             }
+          }
+        }
+        if (!isOwnerCheck && !isReplyToBot) {
+           return;
+        }
       }
 
       const skipGroup = shouldSkipGroupMessage({
@@ -789,7 +819,6 @@ export const registerTelegramHandlers = ({
       });
       if (skipGroup) return;
 
-      const isOwner = isTelegramOwner(event.senderId, cfg);
       const ownerOnly = isXClawMode() && (process.env.XCLAW_OWNER_ONLY === "1" || xclawCfg?.ownerOnly);
 
       if (ownerOnly && !isOwner) {
@@ -873,6 +902,19 @@ export const registerTelegramHandlers = ({
       } else if (action === "deny") {
         await ctx.editMessageText(`❌ Отклонено для ${targetId}`);
         await bot.api.sendMessage(targetId, "😔 Доступ отклонен.");
+      } else if (action === "allowgroup") {
+        const currentConfig = loadConfig();
+        if (!currentConfig.xclaw) currentConfig.xclaw = {};
+        const groupWhitelist = currentConfig.xclaw.groupWhitelist || [];
+        if (!groupWhitelist.includes(targetId)) {
+          groupWhitelist.push(targetId);
+          currentConfig.xclaw.groupWhitelist = groupWhitelist;
+          await writeConfigFile(currentConfig);
+          await ctx.editMessageText(`✅ Группа <code>${targetId}</code> добавлена в белый список.`, { parse_mode: "HTML" });
+          await bot.api.sendMessage(targetId, "🎉 Группа авторизована! Теперь я буду отвечать здесь.");
+        }
+      } else if (action === "denygroup") {
+        await ctx.editMessageText(`❌ Группа <code>${targetId}</code> отклонена.`, { parse_mode: "HTML" });
       }
       await bot.api.answerCallbackQuery(callback.id);
     }

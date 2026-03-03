@@ -1,7 +1,7 @@
-import { isXClawMode } from "./mode.js";
 import { readFileSync, existsSync } from "node:fs";
 import JSON5 from "json5";
 import { CONFIG_PATH } from "../config/config.js";
+import { isXClawMode } from "./mode.js";
 
 let currentLang = "ru";
 

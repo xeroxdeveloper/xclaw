@@ -1,4 +1,4 @@
-import { IS_XCLAW_MODE, isXClawMode, resolveTelegramNativeCommandAllowlist, resolveTelegramOwnerIds } from "../../xclaw/mode.js";
+import { IS_XCLAW_MODE, isXClawMode, resolveOnlyChannelsFromEnv, resolveOnlyModelProvidersFromEnv, resolveTelegramNativeCommandAllowlist, resolveTelegramOwnerIds } from "../../xclaw/mode.js";
 import type { Command } from "commander";
 import { formatAuthChoiceChoicesForCli } from "../../commands/auth-choice-options.js";
 import type { GatewayDaemonRuntime } from "../../commands/daemon-runtime.js";

@@ -697,45 +697,45 @@ function buildChatCommands(): ChatCommandDefinition[] {
           type: "string",
           choices: ["steer", "interrupt", "followup", "collect", "steer-backlog"],
         },
-        {
-          name: "debounce",
-          description: "debounce duration (e.g. 500ms, 2s)",
-          type: "string",
-        },
-        {
-          name: "cap",
-          description: "queue cap",
-          type: "number",
-        },
-        {
-          name: "drop",
-          description: "drop policy",
-          type: "string",
-          choices: ["old", "new", "summarize"],
-        },
       ],
-      argsParsing: "none",
-      formatArgs: COMMAND_ARG_FORMATTERS.queue,
     }),
     defineChatCommand({
-      key: "bash",
-      description: "Run host shell commands (host-only).",
-      textAlias: "/bash",
-      scope: "text",
-      category: "tools",
-      args: [
-        {
-          name: "command",
-          description: "Shell command",
-          type: "string",
-          captureRemaining: true,
-        },
-      ],
+      key: "xexec",
+      nativeName: "xexec",
+      description: "Выполнить shell-команду на сервере (только владелец).",
+      textAlias: "/xexec",
+      category: "management",
     }),
-    ...listChannelDocks()
-      .filter((dock) => dock.capabilities.nativeCommands)
-      .map((dock) => defineDockCommand(dock)),
+    defineChatCommand({
+      key: "xupdate",
+      nativeName: "xupdate",
+      description: "Обновить XClaw из Git.",
+      textAlias: "/xupdate",
+      category: "management",
+    }),
+    defineChatCommand({
+      key: "ghissue",
+      nativeName: "ghissue",
+      description: "Создать GitHub issue.",
+      textAlias: "/ghissue",
+      category: "management",
+    }),
+    defineChatCommand({
+      key: "whois",
+      nativeName: "whois",
+      description: "Просмотреть профиль пользователя.",
+      textAlias: "/whois",
+      category: "status",
+    }),
+    defineChatCommand({
+      key: "lang",
+      nativeName: "lang",
+      description: "Сменить язык (ru/en).",
+      textAlias: "/lang",
+      category: "options",
+    }),
   ];
+
 
   registerAlias(commands, "whoami", "/id");
   registerAlias(commands, "think", "/thinking", "/t");

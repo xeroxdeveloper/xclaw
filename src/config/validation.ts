@@ -233,7 +233,7 @@ function validateXClawModeRestrictions(config: OpenClawConfig): ConfigValidation
     const fallbacks = Array.isArray(agentModel.fallbacks) ? agentModel.fallbacks : [];
     for (let fallbackIndex = 0; fallbackIndex < fallbacks.length; fallbackIndex += 1) {
       validateModelRefProvider(
-        typeof fallbacks[fallbackIndex] === "string" ? fallbacks[fallbackIndex] : undefined,
+        typeof fallbacks[fallbackIndex] === "string" ? fallbackIndex : undefined,
         `agents.list.${index}.model.fallbacks.${fallbackIndex}`,
       );
     }
