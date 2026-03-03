@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import type { ZodIssue } from "zod";
-import { IS_XCLAW_MODE } from "../xclaw/mode.js";
+import { IS_XCLAW_MODE, isXClawMode } from "../xclaw/mode.js";
 import { normalizeChatChannelId } from "../channels/registry.js";
 import {
   isNumericTelegramUserId,

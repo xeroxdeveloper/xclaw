@@ -1,4 +1,5 @@
 import type { Bot } from "grammy";
+import { IS_XCLAW_MODE } from "../xclaw/mode.js";
 import { resolveAgentDir } from "../agents/agent-scope.js";
 import {
   findModelInCatalog,
@@ -159,9 +160,8 @@ export const dispatchTelegramMessage = async ({
   } = context;
 
   const IS_XCLAW = IS_XCLAW_MODE;
-  const xclawCfg = cfg.xclaw;
   
-  if (IS_XCLAW && (xclawCfg?.reactionStatuses !== false)) {
+  if (IS_XCLAW && (cfg.xclaw?.reactionStatuses !== false)) {
     void statusReactionController.setThinking();
   }
 
@@ -388,7 +388,7 @@ export const dispatchTelegramMessage = async ({
     }
   };
   
-  const silentMode = IS_XCLAW && (xclawCfg?.silentMode !== false);
+  const silentMode = IS_XCLAW && (cfg.xclaw?.silentMode !== false);
 
   const deliveryBaseOptions = {
     chatId: String(chatId),
@@ -419,7 +419,7 @@ export const dispatchTelegramMessage = async ({
   });
   if (result.delivered) {
     deliveryState.markDelivered();
-    if (IS_XCLAW && xclawCfg?.autoPin && result.messageIds.length > 0) {
+    if (IS_XCLAW && cfg.xclaw?.autoPin && result.messageIds.length > 0) {
       const messageId = result.messageIds[result.messageIds.length - 1];
       void bot.api.pinChatMessage(chatId, messageId, { disable_notification: true }).catch(() => {});
     }
@@ -639,7 +639,7 @@ export const dispatchTelegramMessage = async ({
           : undefined,
         onToolStart: statusReactionController
           ? async (payload) => {
-              if (IS_XCLAW && (xclawCfg?.loadingIndicator !== false)) {
+              if (IS_XCLAW && (cfg.xclaw?.loadingIndicator !== false)) {
                 if (payload.name.includes("image") || payload.name.includes("dalle")) {
                   await sendChatActionHandler.sendChatAction(chatId, "upload_photo", threadSpec);
                 } else if (payload.name.includes("fetch") || payload.name.includes("browser")) {

@@ -269,7 +269,7 @@ export const registerTelegramHandlers = ({
         const IS_XCLAW = IS_XCLAW_MODE;
         const senderId = last.msg.from?.id ? String(last.msg.from.id) : "";
         const isOwner = isTelegramOwner(senderId, allowFrom);
-        const ownerOnly = IS_XCLAW && process.env.XCLAW_OWNER_ONLY === "1";
+        const ownerOnly = IS_XCLAW && (process.env.XCLAW_OWNER_ONLY === "1" || cfg.xclaw?.ownerOnly);
 
         if (ownerOnly && !isOwner) {
           const ownerIds = Array.from(resolveTelegramOwnerIds());
@@ -317,7 +317,7 @@ export const registerTelegramHandlers = ({
       const IS_XCLAW = IS_XCLAW_MODE;
       const senderId = last.msg.from?.id ? String(last.msg.from.id) : "";
       const isOwner = isTelegramOwner(senderId, allowFrom);
-      const ownerOnly = IS_XCLAW && process.env.XCLAW_OWNER_ONLY === "1";
+      const ownerOnly = IS_XCLAW && (process.env.XCLAW_OWNER_ONLY === "1" || cfg.xclaw?.ownerOnly);
 
       if (ownerOnly && !isOwner) {
         if (last.msg.chat.type === "private") {
@@ -1482,8 +1482,8 @@ export const registerTelegramHandlers = ({
         dmPolicy,
       });
 
-      const groupWhitelist = xclawCfg?.groupWhitelist;
-      if (isGroup && Array.isArray(groupWhitelist) && !groupWhitelist.includes(String(event.chatId))) {
+      const groupWhitelist = cfg.xclaw?.groupWhitelist;
+      if (event.isGroup && Array.isArray(groupWhitelist) && !groupWhitelist.includes(String(event.chatId))) {
         logVerbose(`Blocked telegram group ${event.chatId} (not in whitelist)`);
         return;
       }
