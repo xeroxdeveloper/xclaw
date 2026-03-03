@@ -217,6 +217,19 @@ const coreEntries: CoreCliEntry[] = [
   {
     commands: [
       {
+        name: "add",
+        description: "Добавить Telegram ID в список владельцев",
+        hasSubcommands: false,
+      },
+    ],
+    register: async ({ program }) => {
+      const mod = await import("./register.add-owner.js");
+      mod.registerAddOwnerCommand(program);
+    },
+  },
+  {
+    commands: [
+      {
         name: "xupdate",
         description: t("update.description"),
         hasSubcommands: false,
