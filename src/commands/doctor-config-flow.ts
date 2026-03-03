@@ -1,7 +1,7 @@
+import { IS_XCLAW_MODE, isXClawMode, resolveTelegramNativeCommandAllowlist, resolveTelegramOwnerIds } from "../xclaw/mode.js";
 import fs from "node:fs/promises";
 import path from "node:path";
 import type { ZodIssue } from "zod";
-import { isXClawMode } from "../xclaw/mode.js";
 import { normalizeChatChannelId } from "../channels/registry.js";
 import {
   isNumericTelegramUserId,
@@ -192,7 +192,7 @@ function noteIncludeConfinementWarning(snapshot: {
       '- Move shared include files under that directory and update to relative paths like "./shared/common.json".',
       `- Error: ${includeIssue.message}`,
     ].join("\n"),
-    isXClawMode() ? "Предупреждения доктора" : "Doctor warnings",
+    IS_XCLAW_MODE ? "Предупреждения доктора" : "Doctor warnings",
   );
 }
 
@@ -1323,7 +1323,7 @@ function detectEmptyAllowlistPolicy(cfg: OpenClawConfig): string[] {
 
     if (dmPolicy === "allowlist" && !hasAllowFromEntries(effectiveAllowFrom)) {
       warnings.push(
-        isXClawMode()
+        IS_XCLAW_MODE
           ? `- ${prefix}.dmPolicy установлен в "allowlist", но список allowFrom пуст — все ЛС будут блокироваться. Добавьте ID отправителей или выполните "${formatCliCommand("xclaw doctor --fix")}".`
           : `- ${prefix}.dmPolicy is "allowlist" but allowFrom is empty — all DMs will be blocked. Add sender IDs to ${prefix}.allowFrom, or run "${formatCliCommand("openclaw doctor --fix")}" to auto-migrate from pairing store when entries exist.`,
       );
@@ -1348,13 +1348,13 @@ function detectEmptyAllowlistPolicy(cfg: OpenClawConfig): string[] {
       if (!hasAllowFromEntries(effectiveGroupAllowFrom)) {
         if (fallbackToAllowFrom) {
           warnings.push(
-            isXClawMode()
+            IS_XCLAW_MODE
               ? `- ${prefix}.groupPolicy установлен в "allowlist", но списки groupAllowFrom и allowFrom пусты — сообщения в группах будут игнорироваться. Добавьте ID или установите groupPolicy в "open".`
               : `- ${prefix}.groupPolicy is "allowlist" but groupAllowFrom (and allowFrom) is empty — all group messages will be silently dropped. Add sender IDs to ${prefix}.groupAllowFrom or ${prefix}.allowFrom, or set groupPolicy to "open".`,
           );
         } else {
           warnings.push(
-            isXClawMode()
+            IS_XCLAW_MODE
               ? `- ${prefix}.groupPolicy установлен в "allowlist", но список groupAllowFrom пуст — сообщения в группах будут игнорироваться. Добавьте ID или установите groupPolicy в "open".`
               : `- ${prefix}.groupPolicy is "allowlist" but groupAllowFrom is empty — this channel does not fall back to allowFrom, so all group messages will be silently dropped. Add sender IDs to ${prefix}.groupAllowFrom, or set groupPolicy to "open".`,
           );

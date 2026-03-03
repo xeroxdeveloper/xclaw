@@ -1,4 +1,4 @@
-import { isXClawMode } from "../xclaw/mode.js";
+import { IS_XCLAW_MODE, isXClawMode, resolveTelegramNativeCommandAllowlist, resolveTelegramOwnerIds } from "../xclaw/mode.js";
 import fsSync from "node:fs";
 import { resolveAgentDir, resolveDefaultAgentId } from "../agents/agent-scope.js";
 import { resolveMemorySearchConfig } from "../agents/memory-search.js";
@@ -27,10 +27,10 @@ export async function noteMemorySearchHealth(
   const agentDir = resolveAgentDir(cfg, agentId);
   const resolved = resolveMemorySearchConfig(cfg, agentId);
   const hasRemoteApiKey = Boolean(resolved?.remote?.apiKey?.trim());
-  const cmd = isXClawMode() ? "xclaw" : "openclaw";
+  const cmd = IS_XCLAW_MODE ? "xclaw" : "openclaw";
 
   if (!resolved) {
-    note(isXClawMode() ? "Поиск по памяти явно отключен (enabled: false)." : "Memory search is explicitly disabled (enabled: false).", isXClawMode() ? "Поиск по памяти" : "Memory search");
+    note(IS_XCLAW_MODE ? "Поиск по памяти явно отключен (enabled: false)." : "Memory search is explicitly disabled (enabled: false).", IS_XCLAW_MODE ? "Поиск по памяти" : "Memory search");
     return;
   }
 
@@ -48,7 +48,7 @@ export async function noteMemorySearchHealth(
         return; // local model file exists
       }
       note(
-        isXClawMode() 
+        IS_XCLAW_MODE 
           ? [
               'Провайдер поиска по памяти установлен в "local", но файл модели не найден.',
               "",
@@ -67,7 +67,7 @@ export async function noteMemorySearchHealth(
               "",
               `Verify: ${formatCliCommand("openclaw memory status --deep")}`,
             ].join("\n"),
-        isXClawMode() ? "Поиск по памяти" : "Memory search",
+        IS_XCLAW_MODE ? "Поиск по памяти" : "Memory search",
       );
       return;
     }
@@ -77,7 +77,7 @@ export async function noteMemorySearchHealth(
     }
     if (opts?.gatewayMemoryProbe?.checked && opts.gatewayMemoryProbe.ready) {
       note(
-        isXClawMode() 
+        IS_XCLAW_MODE 
           ? [
               `Провайдер поиска по памяти установлен в "${resolved.provider}", но API ключ не найден в окружении CLI.`,
               "Работающий шлюз сообщает, что эмбеддинги памяти готовы для агента по умолчанию.",
@@ -88,14 +88,14 @@ export async function noteMemorySearchHealth(
               "The running gateway reports memory embeddings are ready for the default agent.",
               `Verify: ${formatCliCommand("openclaw memory status --deep")}`,
             ].join("\n"),
-        isXClawMode() ? "Поиск по памяти" : "Memory search",
+        IS_XCLAW_MODE ? "Поиск по памяти" : "Memory search",
       );
       return;
     }
     const gatewayProbeWarning = buildGatewayProbeWarning(opts?.gatewayMemoryProbe);
     const envVar = providerEnvVar(resolved.provider);
     note(
-      isXClawMode() 
+      IS_XCLAW_MODE 
         ? [
             `Провайдер поиска по памяти установлен в "${resolved.provider}", но API ключ не найден.`,
             `Семантический поиск не будет работать без валидного API ключа.`,
@@ -120,7 +120,7 @@ export async function noteMemorySearchHealth(
             "",
             `Verify: ${formatCliCommand("openclaw memory status --deep")}`,
           ].join("\n"),
-      isXClawMode() ? "Поиск по памяти" : "Memory search",
+      IS_XCLAW_MODE ? "Поиск по памяти" : "Memory search",
     );
     return;
   }
@@ -137,7 +137,7 @@ export async function noteMemorySearchHealth(
 
   if (opts?.gatewayMemoryProbe?.checked && opts.gatewayMemoryProbe.ready) {
     note(
-      isXClawMode() 
+      IS_XCLAW_MODE 
         ? [
             'Провайдер поиска по памяти установлен в "auto", но API ключ не найден в окружении CLI.',
             "Работающий шлюз сообщает, что эмбеддинги памяти готовы для агента по умолчанию.",
@@ -148,14 +148,14 @@ export async function noteMemorySearchHealth(
             "The running gateway reports memory embeddings are ready for the default agent.",
             `Verify: ${formatCliCommand("openclaw memory status --deep")}`,
           ].join("\n"),
-      isXClawMode() ? "Поиск по памяти" : "Memory search",
+      IS_XCLAW_MODE ? "Поиск по памяти" : "Memory search",
     );
     return;
   }
   const gatewayProbeWarning = buildGatewayProbeWarning(opts?.gatewayMemoryProbe);
 
   note(
-    isXClawMode() 
+    IS_XCLAW_MODE 
       ? [
           "Поиск по памяти включен, но провайдер эмбеддингов не настроен.",
           "Семантический поиск не будет работать без провайдера эмбеддингов.",
@@ -182,7 +182,7 @@ export async function noteMemorySearchHealth(
           "",
           `Verify: ${formatCliCommand("openclaw memory status --deep")}`,
         ].join("\n"),
-    isXClawMode() ? "Поиск по памяти" : "Memory search",
+    IS_XCLAW_MODE ? "Поиск по памяти" : "Memory search",
   );
 }
 
@@ -247,6 +247,6 @@ function buildGatewayProbeWarning(
   }
   const detail = probe.error?.trim();
   return detail
-    ? isXClawMode() ? `Проверка памяти шлюза для агента по умолчанию не готова: ${detail}` : `Gateway memory probe for default agent is not ready: ${detail}`
-    : isXClawMode() ? "Проверка памяти шлюза для агента по умолчанию не готова." : "Gateway memory probe for default agent is not ready.";
+    ? IS_XCLAW_MODE ? `Проверка памяти шлюза для агента по умолчанию не готова: ${detail}` : `Gateway memory probe for default agent is not ready: ${detail}`
+    : IS_XCLAW_MODE ? "Проверка памяти шлюза для агента по умолчанию не готова." : "Gateway memory probe for default agent is not ready.";
 }

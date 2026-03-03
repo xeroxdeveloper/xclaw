@@ -1,6 +1,6 @@
+import { IS_XCLAW_MODE, isXClawMode, resolveTelegramNativeCommandAllowlist, resolveTelegramOwnerIds } from "../xclaw/mode.js";
 import { DEFAULT_CONTEXT_TOKENS } from "../agents/defaults.js";
 import { normalizeProviderId, parseModelRef } from "../agents/model-selection.js";
-import { isXClawMode } from "../xclaw/mode.js";
 import { DEFAULT_AGENT_MAX_CONCURRENT, DEFAULT_SUBAGENT_MAX_CONCURRENT } from "./agent-limits.js";
 import { resolveAgentModelPrimaryValue } from "./model-input.js";
 import {
@@ -533,7 +533,7 @@ export function applyCompactionDefaults(cfg: OpenClawConfig): OpenClawConfig {
 }
 
 export function applyXClawDefaults(cfg: OpenClawConfig): OpenClawConfig {
-  if (!isXClawMode()) {
+  if (!IS_XCLAW_MODE) {
     return cfg;
   }
   

@@ -1,6 +1,6 @@
+import { IS_XCLAW_MODE, isXClawMode, resolveTelegramNativeCommandAllowlist, resolveTelegramOwnerIds } from "../xclaw/mode.js";
 import { execFile } from "node:child_process";
 import fs from "node:fs/promises";
-import { isXClawMode } from "../xclaw/mode.js";
 import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
@@ -200,12 +200,12 @@ export async function maybeRepairGatewayServiceConfig(
   prompter: DoctorPrompter,
 ) {
   if (resolveIsNixMode(process.env)) {
-    note(isXClawMode() ? "Обнаружен Nix; пропуск обновления служб." : "Nix mode detected; skip service updates.", isXClawMode() ? "Шлюз" : "Gateway");
+    note(IS_XCLAW_MODE ? "Обнаружен Nix; пропуск обновления служб." : "Nix mode detected; skip service updates.", IS_XCLAW_MODE ? "Шлюз" : "Gateway");
     return;
   }
 
   if (mode === "remote") {
-    note(isXClawMode() ? "Режим шлюза удаленный; аудит локальной службы пропущен." : "Gateway mode is remote; skipped local service audit.", isXClawMode() ? "Шлюз" : "Gateway");
+    note(IS_XCLAW_MODE ? "Режим шлюза удаленный; аудит локальной службы пропущен." : "Gateway mode is remote; skipped local service audit.", IS_XCLAW_MODE ? "Шлюз" : "Gateway");
     return;
   }
 
@@ -234,13 +234,13 @@ export async function maybeRepairGatewayServiceConfig(
   if (needsNodeRuntime && !systemNodePath) {
     const warning = renderSystemNodeWarning(systemNodeInfo);
     if (warning) {
-      note(warning, isXClawMode() ? "Среда шлюза" : "Gateway runtime");
+      note(warning, IS_XCLAW_MODE ? "Среда шлюза" : "Gateway runtime");
     }
     note(
-      isXClawMode()
+      IS_XCLAW_MODE
         ? "Системный Node 22+ не найден. Установите его через Homebrew/apt/choco и запустите doctor снова для миграции с Bun или менеджеров версий."
         : "System Node 22+ not found. Install via Homebrew/apt/choco and rerun doctor to migrate off Bun/version managers.",
-      isXClawMode() ? "Среда шлюза" : "Gateway runtime",
+      IS_XCLAW_MODE ? "Среда шлюза" : "Gateway runtime",
     );
   }
 
@@ -264,7 +264,7 @@ export async function maybeRepairGatewayServiceConfig(
   ) {
     audit.issues.push({
       code: SERVICE_AUDIT_CODES.gatewayEntrypointMismatch,
-      message: isXClawMode() ? "Точка входа службы шлюза не совпадает с текущей установкой." : "Gateway service entrypoint does not match the current install.",
+      message: IS_XCLAW_MODE ? "Точка входа службы шлюза не совпадает с текущей установкой." : "Gateway service entrypoint does not match the current install.",
       detail: `${currentEntrypoint} -> ${expectedEntrypoint}`,
       level: "recommended",
     });
@@ -280,7 +280,7 @@ export async function maybeRepairGatewayServiceConfig(
         issue.detail ? `- ${issue.message} (${issue.detail})` : `- ${issue.message}`,
       )
       .join("\n"),
-    isXClawMode() ? "Конфиг службы шлюза" : "Gateway service config",
+    IS_XCLAW_MODE ? "Конфиг службы шлюза" : "Gateway service config",
   );
 
   const aggressiveIssues = audit.issues.filter((issue) => issue.level === "aggressive");
@@ -288,18 +288,18 @@ export async function maybeRepairGatewayServiceConfig(
 
   if (needsAggressive && !prompter.shouldForce) {
     note(
-      isXClawMode() ? "Обнаружены пользовательские правки службы. Запустите с --force для перезаписи." : "Custom or unexpected service edits detected. Rerun with --force to overwrite.",
-      isXClawMode() ? "Конфиг службы шлюза" : "Gateway service config",
+      IS_XCLAW_MODE ? "Обнаружены пользовательские правки службы. Запустите с --force для перезаписи." : "Custom or unexpected service edits detected. Rerun with --force to overwrite.",
+      IS_XCLAW_MODE ? "Конфиг службы шлюза" : "Gateway service config",
     );
   }
 
   const repair = needsAggressive
     ? await prompter.confirmAggressive({
-        message: isXClawMode() ? "Перезаписать конфиг службы шлюза текущими дефолтами?" : "Overwrite gateway service config with current defaults now?",
+        message: IS_XCLAW_MODE ? "Перезаписать конфиг службы шлюза текущими дефолтами?" : "Overwrite gateway service config with current defaults now?",
         initialValue: Boolean(prompter.shouldForce),
       })
     : await prompter.confirmRepair({
-        message: isXClawMode() ? "Обновить конфиг службы шлюза до рекомендуемых дефолтов?" : "Update gateway service config to the recommended defaults now?",
+        message: IS_XCLAW_MODE ? "Обновить конфиг службы шлюза до рекомендуемых дефолтов?" : "Update gateway service config to the recommended defaults now?",
         initialValue: true,
       });
   if (!repair) {
@@ -332,13 +332,13 @@ export async function maybeScanExtraGatewayServices(
 
   note(
     extraServices.map((svc) => `- ${svc.label} (${svc.scope}, ${svc.detail})`).join("\n"),
-    isXClawMode() ? "Обнаружены другие похожие службы" : "Other gateway-like services detected",
+    IS_XCLAW_MODE ? "Обнаружены другие похожие службы" : "Other gateway-like services detected",
   );
 
   const legacyServices = extraServices.filter((svc) => svc.legacy === true);
   if (legacyServices.length > 0) {
     const shouldRemove = await prompter.confirmSkipInNonInteractive({
-      message: isXClawMode() ? "Удалить устаревшие службы (clawdbot/moltbot)?" : "Remove legacy gateway services (clawdbot/moltbot) now?",
+      message: IS_XCLAW_MODE ? "Удалить устаревшие службы (clawdbot/moltbot)?" : "Remove legacy gateway services (clawdbot/moltbot) now?",
       initialValue: true,
     });
     if (shouldRemove) {
@@ -359,24 +359,24 @@ export async function maybeScanExtraGatewayServices(
       }
 
       if (removed.length > 0) {
-        note(removed.map((line) => `- ${line}`).join("\n"), isXClawMode() ? "Устаревший шлюз удален" : "Legacy gateway removed");
+        note(removed.map((line) => `- ${line}`).join("\n"), IS_XCLAW_MODE ? "Устаревший шлюз удален" : "Legacy gateway removed");
       }
       if (failed.length > 0) {
-        note(failed.map((line) => `- ${line}`).join("\n"), isXClawMode() ? "Очистка устаревшего шлюза пропущена" : "Legacy gateway cleanup skipped");
+        note(failed.map((line) => `- ${line}`).join("\n"), IS_XCLAW_MODE ? "Очистка устаревшего шлюза пропущена" : "Legacy gateway cleanup skipped");
       }
       if (removed.length > 0) {
-        runtime.log(isXClawMode() ? "Устаревшие службы удалены. Следующий шаг: установка шлюза XClaw." : "Legacy gateway services removed. Installing OpenClaw gateway next.");
+        runtime.log(IS_XCLAW_MODE ? "Устаревшие службы удалены. Следующий шаг: установка шлюза XClaw." : "Legacy gateway services removed. Installing OpenClaw gateway next.");
       }
     }
   }
 
   const cleanupHints = renderGatewayServiceCleanupHints();
   if (cleanupHints.length > 0) {
-    note(cleanupHints.map((hint) => `- ${hint}`).join("\n"), isXClawMode() ? "Подсказки по очистке" : "Cleanup hints");
+    note(cleanupHints.map((hint) => `- ${hint}`).join("\n"), IS_XCLAW_MODE ? "Подсказки по очистке" : "Cleanup hints");
   }
 
   note(
-    isXClawMode()
+    IS_XCLAW_MODE
       ? [
           "Рекомендация: запускайте один шлюз на одну машину.",
           "Один шлюз поддерживает несколько агентов.",
@@ -387,6 +387,6 @@ export async function maybeScanExtraGatewayServices(
           "One gateway supports multiple agents.",
           "If you need multiple gateways (e.g., a rescue bot on the same host), isolate ports + config/state (see docs: /gateway#multiple-gateways-same-host).",
         ].join("\n"),
-    isXClawMode() ? "Рекомендация по шлюзу" : "Gateway recommendation",
+    IS_XCLAW_MODE ? "Рекомендация по шлюзу" : "Gateway recommendation",
   );
 }

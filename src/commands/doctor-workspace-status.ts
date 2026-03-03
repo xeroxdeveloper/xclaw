@@ -1,4 +1,4 @@
-import { isXClawMode } from "../xclaw/mode.js";
+import { IS_XCLAW_MODE, isXClawMode, resolveTelegramNativeCommandAllowlist, resolveTelegramOwnerIds } from "../xclaw/mode.js";
 import { resolveAgentWorkspaceDir, resolveDefaultAgentId } from "../agents/agent-scope.js";
 import { buildWorkspaceSkillStatus } from "../agents/skills-status.js";
 import type { OpenClawConfig } from "../config/config.js";
@@ -10,20 +10,20 @@ export function noteWorkspaceStatus(cfg: OpenClawConfig) {
   const workspaceDir = resolveAgentWorkspaceDir(cfg, resolveDefaultAgentId(cfg));
   const legacyWorkspace = detectLegacyWorkspaceDirs({ workspaceDir });
   if (legacyWorkspace.legacyDirs.length > 0) {
-    note(formatLegacyWorkspaceWarning(legacyWorkspace), isXClawMode() ? "Лишняя рабочая область" : "Extra workspace");
+    note(formatLegacyWorkspaceWarning(legacyWorkspace), IS_XCLAW_MODE ? "Лишняя рабочая область" : "Extra workspace");
   }
 
   const skillsReport = buildWorkspaceSkillStatus(workspaceDir, { config: cfg });
   note(
     [
-      `${isXClawMode() ? "Доступно" : "Eligible"}: ${skillsReport.skills.filter((s) => s.eligible).length}`,
-      `${isXClawMode() ? "Не хватает данных" : "Missing requirements"}: ${
+      `${IS_XCLAW_MODE ? "Доступно" : "Eligible"}: ${skillsReport.skills.filter((s) => s.eligible).length}`,
+      `${IS_XCLAW_MODE ? "Не хватает данных" : "Missing requirements"}: ${
         skillsReport.skills.filter((s) => !s.eligible && !s.disabled && !s.blockedByAllowlist)
           .length
       }`,
-      `${isXClawMode() ? "Заблокировано списком" : "Blocked by allowlist"}: ${skillsReport.skills.filter((s) => s.blockedByAllowlist).length}`,
+      `${IS_XCLAW_MODE ? "Заблокировано списком" : "Blocked by allowlist"}: ${skillsReport.skills.filter((s) => s.blockedByAllowlist).length}`,
     ].join("\n"),
-    isXClawMode() ? "Статус навыков" : "Skills status",
+    IS_XCLAW_MODE ? "Статус навыков" : "Skills status",
   );
 
   const pluginRegistry = loadOpenClawPlugins({
@@ -42,9 +42,9 @@ export function noteWorkspaceStatus(cfg: OpenClawConfig) {
     const errored = pluginRegistry.plugins.filter((p) => p.status === "error");
 
     const lines = [
-      `${isXClawMode() ? "Загружено" : "Loaded"}: ${loaded.length}`,
-      `${isXClawMode() ? "Отключено" : "Disabled"}: ${disabled.length}`,
-      `${isXClawMode() ? "Ошибки" : "Errors"}: ${errored.length}`,
+      `${IS_XCLAW_MODE ? "Загружено" : "Loaded"}: ${loaded.length}`,
+      `${IS_XCLAW_MODE ? "Отключено" : "Disabled"}: ${disabled.length}`,
+      `${IS_XCLAW_MODE ? "Ошибки" : "Errors"}: ${errored.length}`,
       errored.length > 0
         ? `- ${errored
             .slice(0, 10)
@@ -53,7 +53,7 @@ export function noteWorkspaceStatus(cfg: OpenClawConfig) {
         : null,
     ].filter((line): line is string => Boolean(line));
 
-    note(lines.join("\n"), isXClawMode() ? "Плагины" : "Plugins");
+    note(lines.join("\n"), IS_XCLAW_MODE ? "Плагины" : "Plugins");
   }
   if (pluginRegistry.diagnostics.length > 0) {
     const lines = pluginRegistry.diagnostics.map((diag) => {
@@ -62,7 +62,7 @@ export function noteWorkspaceStatus(cfg: OpenClawConfig) {
       const source = diag.source ? ` (${diag.source})` : "";
       return `- ${prefix}${plugin}: ${diag.message}${source}`;
     });
-    note(lines.join("\n"), isXClawMode() ? "Диагностика плагинов" : "Plugin diagnostics");
+    note(lines.join("\n"), IS_XCLAW_MODE ? "Диагностика плагинов" : "Plugin diagnostics");
   }
 
   return { workspaceDir };

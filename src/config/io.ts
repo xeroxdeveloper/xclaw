@@ -1,3 +1,4 @@
+import { IS_XCLAW_MODE, isXClawMode, resolveTelegramNativeCommandAllowlist, resolveTelegramOwnerIds } from "../xclaw/mode.js";
 import crypto from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
@@ -146,13 +147,12 @@ function hashConfigRaw(raw: string | null): string {
     .digest("hex");
 }
 
-import { isXClawMode } from "../xclaw/mode.js";
 
 function formatConfigValidationFailure(pathLabel: string, issueMessage: string): string {
   const match = issueMessage.match(OPEN_DM_POLICY_ALLOW_FROM_RE);
   const policyPath = match?.groups?.policyPath?.trim();
   const allowPath = match?.groups?.allowPath?.trim();
-  const cmd = isXClawMode() ? "xlaw" : "openclaw";
+  const cmd = IS_XCLAW_MODE ? "xlaw" : "openclaw";
 
   if (!policyPath || !allowPath) {
     return `Config validation failed: ${pathLabel}: ${issueMessage}`;

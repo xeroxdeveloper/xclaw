@@ -1,7 +1,7 @@
+import { IS_XCLAW_MODE, isXClawMode, resolveTelegramNativeCommandAllowlist, resolveTelegramOwnerIds } from "../xclaw/mode.js";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { isXClawMode } from "../xclaw/mode.js";
 import { expandHomePrefix, resolveRequiredHomeDir } from "../infra/home-dir.js";
 import type { OpenClawConfig } from "./types.js";
 
@@ -18,21 +18,21 @@ export const isNixMode = resolveIsNixMode();
 const LEGACY_STATE_DIRNAMES = [".clawdbot", ".moldbot", ".moltbot"] as const;
 
 function getNewStateDirname(): string {
-  return isXClawMode() ? ".xclaw" : ".openclaw";
+  return IS_XCLAW_MODE ? ".xclaw" : ".openclaw";
 }
 
 function getConfigFilename(): string {
-  return isXClawMode() ? "xclaw.json" : "openclaw.json";
+  return IS_XCLAW_MODE ? "xclaw.json" : "openclaw.json";
 }
 
 function getLegacyConfigFilenames(): string[] {
-  return isXClawMode() 
+  return IS_XCLAW_MODE 
     ? [] 
     : ["clawdbot.json", "moldbot.json", "moltbot.json"];
 }
 
 function getLegacyStateDirnames(): string[] {
-  return isXClawMode() ? [] : [...LEGACY_STATE_DIRNAMES];
+  return IS_XCLAW_MODE ? [] : [...LEGACY_STATE_DIRNAMES];
 }
 
 function resolveDefaultHomeDir(): string {
@@ -228,7 +228,7 @@ export const DEFAULT_GATEWAY_PORT = 18789;
 export function resolveGatewayLockDir(tmpdir: () => string = os.tmpdir): string {
   const base = tmpdir();
   const uid = typeof process.getuid === "function" ? process.getuid() : undefined;
-  const prefix = isXClawMode() ? "xlaw" : "openclaw";
+  const prefix = IS_XCLAW_MODE ? "xlaw" : "openclaw";
   const suffix = uid != null ? `${prefix}-${uid}` : prefix;
   return path.join(base, suffix);
 }

@@ -1,3 +1,4 @@
+import { IS_XCLAW_MODE, isXClawMode, resolveTelegramNativeCommandAllowlist, resolveTelegramOwnerIds } from "../xclaw/mode.js";
 import { getAcpSessionManager } from "../acp/control-plane/manager.js";
 import { ACP_SESSION_IDENTITY_RENDERER_VERSION } from "../acp/runtime/session-identifiers.js";
 import { DEFAULT_MODEL, DEFAULT_PROVIDER } from "../agents/defaults.js";
@@ -28,7 +29,6 @@ import {
   shouldWakeFromRestartSentinel,
 } from "./server-restart-sentinel.js";
 import { startGatewayMemoryBackend } from "./server-startup-memory.js";
-import { isXClawMode } from "../xclaw/mode.js";
 
 const SESSION_LOCK_STALE_MS = 30 * 60 * 1000;
 
@@ -188,7 +188,7 @@ export async function startGatewaySidecars(params: {
     }, 750);
   }
 
-  if (isXClawMode()) {
+  if (IS_XCLAW_MODE) {
     const { startXClawAutonomousService } = await import("../xclaw/autonomous.js");
     startXClawAutonomousService();
   }

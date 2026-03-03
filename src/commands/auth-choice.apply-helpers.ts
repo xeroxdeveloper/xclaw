@@ -1,3 +1,4 @@
+import { IS_XCLAW_MODE, isXClawMode, resolveTelegramNativeCommandAllowlist, resolveTelegramOwnerIds } from "../xclaw/mode.js";
 import { resolveEnvApiKey } from "../agents/model-auth.js";
 import type { OpenClawConfig } from "../config/types.js";
 import { type SecretInput, type SecretRef } from "../config/types.secrets.js";
@@ -9,7 +10,6 @@ import {
 } from "../secrets/ref-contract.js";
 import { resolveSecretRefString } from "../secrets/resolve.js";
 import type { WizardPrompter } from "../wizard/prompts.js";
-import { isXClawMode } from "../xclaw/mode.js";
 import { t } from "../xclaw/i18n.js";
 import { formatApiKeyPreview } from "./auth-choice.api-key.js";
 import type { ApplyAuthChoiceParams } from "./auth-choice.apply.js";
@@ -346,14 +346,14 @@ export async function resolveSecretInputModeForEnvSelection(params: {
       {
         value: "plaintext",
         label: t("auth.api_key.paste"),
-        hint: isXClawMode()
+        hint: IS_XCLAW_MODE
           ? "Сохраняет ключ напрямую в конфиг xclaw"
           : "Stores the key directly in OpenClaw config",
       },
       {
         value: "ref",
-        label: isXClawMode() ? "Использовать ссылку на секрет" : "Use secret reference",
-        hint: isXClawMode()
+        label: IS_XCLAW_MODE ? "Использовать ссылку на секрет" : "Use secret reference",
+        hint: IS_XCLAW_MODE
           ? "Использует переменную окружения или внешний провайдер"
           : "Stores a reference to env or configured external secret providers",
       },
@@ -466,7 +466,7 @@ export async function ensureApiKeyFromEnvOrPrompt(params: {
 
   if (envKey && selectedMode === "plaintext") {
     const useExisting = await params.prompter.confirm({
-      message: isXClawMode()
+      message: IS_XCLAW_MODE
         ? `Использовать существующий ${params.envLabel} (${envKey.source}, ${formatApiKeyPreview(envKey.apiKey)})?`
         : `Use existing ${params.envLabel} (${envKey.source}, ${formatApiKeyPreview(envKey.apiKey)})?`,
       initialValue: true,

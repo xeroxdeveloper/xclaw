@@ -1,4 +1,4 @@
-import { isXClawMode } from "../xclaw/mode.js";
+import { IS_XCLAW_MODE, isXClawMode, resolveTelegramNativeCommandAllowlist, resolveTelegramOwnerIds } from "../xclaw/mode.js";
 import { t } from "../xclaw/i18n.js";
 import {
   autocompleteMultiselect,
@@ -23,7 +23,7 @@ import { WizardCancelledError } from "./prompts.js";
 
 function guardCancel<T>(value: T | symbol): T {
   if (isCancel(value)) {
-    cancel(stylePromptTitle(isXClawMode() ? "Настройка отменена." : "Setup cancelled.") ?? (isXClawMode() ? "Настройка отменена." : "Setup cancelled."));
+    cancel(stylePromptTitle(IS_XCLAW_MODE ? "Настройка отменена." : "Setup cancelled.") ?? (IS_XCLAW_MODE ? "Настройка отменена." : "Setup cancelled."));
     throw new WizardCancelledError();
   }
   return value;
@@ -116,8 +116,8 @@ export function createClackPrompter(): WizardPrompter {
         await confirm({
           message: stylePromptMessage(params.message),
           initialValue: params.initialValue,
-          active: isXClawMode() ? "Да" : "Yes",
-          inactive: isXClawMode() ? "Нет" : "No",
+          active: IS_XCLAW_MODE ? "Да" : "Yes",
+          inactive: IS_XCLAW_MODE ? "Нет" : "No",
         }),
       );
     },

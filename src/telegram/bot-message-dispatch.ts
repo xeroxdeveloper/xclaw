@@ -1,5 +1,5 @@
+import { IS_XCLAW_MODE, isXClawMode, resolveTelegramNativeCommandAllowlist, resolveTelegramOwnerIds } from "../xclaw/mode.js";
 import type { Bot } from "grammy";
-import { isXClawMode } from "../xclaw/mode.js";
 import { resolveAgentDir } from "../agents/agent-scope.js";
 import {
   findModelInCatalog,
@@ -160,7 +160,7 @@ export const dispatchTelegramMessage = async ({
   } = context;
 
   
-  if (isXClawMode() && (cfg.xclaw?.reactionStatuses !== false)) {
+  if (IS_XCLAW_MODE && (cfg.xclaw?.reactionStatuses !== false)) {
     void statusReactionController?.setThinking().catch(() => {});
   }
 
@@ -387,7 +387,7 @@ export const dispatchTelegramMessage = async ({
     }
   };
   
-  const silentMode = isXClawMode() && (cfg.xclaw?.silentMode !== false);
+  const silentMode = IS_XCLAW_MODE && (cfg.xclaw?.silentMode !== false);
 
   const deliveryBaseOptions = {
     chatId: String(chatId),
@@ -418,7 +418,7 @@ export const dispatchTelegramMessage = async ({
   });
   if (result.delivered) {
     deliveryState.markDelivered();
-    if (isXClawMode() && cfg.xclaw?.autoPin && result.messageIds.length > 0) {
+    if (IS_XCLAW_MODE && cfg.xclaw?.autoPin && result.messageIds.length > 0) {
       const messageId = result.messageIds[result.messageIds.length - 1];
       void bot.api.pinChatMessage(chatId, messageId, { disable_notification: true }).catch(() => {});
     }
@@ -485,7 +485,7 @@ export const dispatchTelegramMessage = async ({
             payload.channelData?.telegram as { buttons?: TelegramInlineButtons } | undefined
           )?.buttons;
 
-          const previewButtons: TelegramInlineButtons | undefined = (isXClawMode() && info.kind !== "final")
+          const previewButtons: TelegramInlineButtons | undefined = (IS_XCLAW_MODE && info.kind !== "final")
             ? [[{ text: "🛑 СТОП", callback_data: "/stop" }], ...(previewButtonsBase ?? [])]
             : previewButtonsBase;
           const split = splitTextIntoLaneSegments(payload.text);
@@ -638,7 +638,7 @@ export const dispatchTelegramMessage = async ({
           : undefined,
         onToolStart: statusReactionController
           ? async (payload) => {
-              if (isXClawMode() && (cfg.xclaw?.loadingIndicator !== false)) {
+              if (IS_XCLAW_MODE && (cfg.xclaw?.loadingIndicator !== false)) {
                 if (payload.name.includes("image") || payload.name.includes("dalle")) {
                   await sendChatActionHandler.sendChatAction(chatId, "upload_photo", threadSpec);
                 } else if (payload.name.includes("fetch") || payload.name.includes("browser")) {
@@ -652,7 +652,7 @@ export const dispatchTelegramMessage = async ({
       },
     }));
     
-    if (isXClawMode() && (cfg.xclaw?.reactionStatuses !== false)) {
+    if (IS_XCLAW_MODE && (cfg.xclaw?.reactionStatuses !== false)) {
       void statusReactionController?.setDone().catch(() => {});
     }
   } finally {

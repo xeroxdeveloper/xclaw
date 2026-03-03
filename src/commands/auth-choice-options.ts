@@ -1,5 +1,5 @@
+import { IS_XCLAW_MODE, isXClawMode, resolveTelegramNativeCommandAllowlist, resolveTelegramOwnerIds } from "../xclaw/mode.js";
 import type { AuthProfileStore } from "../agents/auth-profiles.js";
-import { isXClawMode } from "../xclaw/mode.js";
 import { AUTH_CHOICE_LEGACY_ALIASES_FOR_CLI } from "./auth-choice-legacy.js";
 import { ONBOARD_PROVIDER_AUTH_FLAGS } from "./onboard-provider-auth-flags.js";
 import type { AuthChoice, AuthChoiceGroupId } from "./onboard-types.js";
@@ -68,14 +68,14 @@ const AUTH_CHOICE_GROUP_DEFS: {
   },
   {
     value: "local-ai",
-    label: isXClawMode() ? "Local AI" : "Local AI",
-    hint: isXClawMode() ? "локальная модель" : "local model",
+    label: IS_XCLAW_MODE ? "Local AI" : "Local AI",
+    hint: IS_XCLAW_MODE ? "локальная модель" : "local model",
     choices: ["vllm"],
   },
   {
     value: "no-api",
     label: "No API",
-    hint: isXClawMode() ? "Скоро..." : "Soon...",
+    hint: IS_XCLAW_MODE ? "Скоро..." : "Soon...",
     choices: [],
   },
   {
@@ -336,7 +336,7 @@ export function buildAuthChoiceOptions(params: {
   includeSkip: boolean;
 }): AuthChoiceOption[] {
   void params.store;
-  const options: AuthChoiceOption[] = isXClawMode()
+  const options: AuthChoiceOption[] = IS_XCLAW_MODE
     ? Array.from(
         new Map(
           BASE_AUTH_CHOICE_OPTIONS.filter(
@@ -372,7 +372,7 @@ export function buildAuthChoiceGroups(params: { store: AuthProfileStore; include
       .filter((opt): opt is AuthChoiceOption => Boolean(opt)),
   }));
 
-  const filteredGroups = isXClawMode()
+  const filteredGroups = IS_XCLAW_MODE
     ? groups.filter((group) => ["openai", "google", "local-ai", "no-api"].includes(group.value))
     : groups;
 

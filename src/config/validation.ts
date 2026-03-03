@@ -1,3 +1,11 @@
+import {
+  IS_XCLAW_MODE,
+  isXClawMode,
+  resolveOnlyChannelsFromEnv,
+  resolveOnlyModelProvidersFromEnv,
+  resolveTelegramNativeCommandAllowlist,
+  resolveTelegramOwnerIds,
+} from "../xclaw/mode.js";
 import path from "node:path";
 import { resolveAgentWorkspaceDir, resolveDefaultAgentId } from "../agents/agent-scope.js";
 import { CHANNEL_IDS, normalizeChatChannelId } from "../channels/registry.js";
@@ -17,11 +25,6 @@ import {
 } from "../shared/avatar-policy.js";
 import { isCanonicalDottedDecimalIPv4, isLoopbackIpAddress } from "../shared/net/ip.js";
 import { isRecord } from "../utils.js";
-import {
-  isXClawMode,
-  resolveOnlyChannelsFromEnv,
-  resolveOnlyModelProvidersFromEnv,
-} from "../xclaw/mode.js";
 import { findDuplicateAgentDirs, formatDuplicateAgentDirError } from "./agent-dirs.js";
 import { applyAgentDefaults, applyModelDefaults, applySessionDefaults } from "./defaults.js";
 import { findLegacyConfigIssues } from "./legacy.js";

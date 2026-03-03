@@ -1,38 +1,38 @@
-import { isXClawMode } from "../xclaw/mode.js";
+import { IS_XCLAW_MODE, isXClawMode, resolveTelegramNativeCommandAllowlist, resolveTelegramOwnerIds } from "../xclaw/mode.js";
 
-const DEFAULT_TAGLINE = isXClawMode()
+const DEFAULT_TAGLINE = IS_XCLAW_MODE
   ? "Ваши чаты — чистая огранка, блестящий результат."
   : "Your chats, diamond-cut and brilliant.";
 
 const HOLIDAY_TAGLINES = {
-  newYear: isXClawMode()
+  newYear: IS_XCLAW_MODE
     ? "Новый год: Новый год, новый конфиг — тот же старый EADDRINUSE, но теперь мы решаем это стильно."
     : "New Year's Day: New year, new config—same old EADDRINUSE, but this time we resolve it with style.",
-  lunarNewYear: isXClawMode()
+  lunarNewYear: IS_XCLAW_MODE
     ? "Лунный Новый год: Пусть ваши сборки будут удачными, ветки — процветающими, а конфликты слияния исчезают как по волшебству."
     : "Lunar New Year: May your builds be lucky, your branches prosperous, and your merge conflicts disappear like magic.",
-  christmas: isXClawMode()
+  christmas: IS_XCLAW_MODE
     ? "Рождество: Хо-хо-хо — ваш боксовый помощник здесь, чтобы дарить радость и надежно прятать ключи."
     : "Christmas: Ho ho ho—your diamond assistant is here to ship joy and stash the keys safely.",
-  eid: isXClawMode()
+  eid: IS_XCLAW_MODE
     ? "Ураза-байрам: Режим празднования: очереди очищены, задачи выполнены, хорошее настроение закомичено в main."
     : "Eid al-Fitr: Celebration mode: queues cleared, tasks completed, and good vibes committed to main.",
-  diwali: isXClawMode()
+  diwali: IS_XCLAW_MODE
     ? "Дивали: Пусть логи сверкают, а баги бегут — сегодня мы зажигаем терминал и шипим с гордостью."
     : "Diwali: Let the logs sparkle and the bugs flee—today we light up the terminal and ship with pride.",
-  easter: isXClawMode()
+  easter: IS_XCLAW_MODE
     ? "Пасха: Я нашел вашу потерянную переменную окружения — считайте это маленькой охотой за сокровищами."
     : "Easter: I found your missing environment variable—consider it a tiny treasure hunt.",
-  hanukkah: isXClawMode()
+  hanukkah: IS_XCLAW_MODE
     ? "Ханука: Восемь ночей, восемь попыток, ноль стыда — пусть ваш шлюз горит ярко, а деплои будут мирными."
     : "Hanukkah: Eight nights, eight retries, zero shame—may your gateway stay lit and your deployments peaceful.",
-  halloween: isXClawMode()
+  halloween: IS_XCLAW_MODE
     ? "Хэллоуин: Жуткий сезон: берегитесь проклятых зависимостей и призраков прошлых node_modules."
     : "Halloween: Spooky season: beware haunted dependencies and the ghost of node_modules past.",
-  thanksgiving: isXClawMode()
+  thanksgiving: IS_XCLAW_MODE
     ? "День благодарения: Благодарен за стабильные порты, рабочий DNS и бота, который действительно читает логи."
     : "Thanksgiving: Grateful for stable ports, working DNS, and a bot that actually reads the logs.",
-  valentines: isXClawMode()
+  valentines: IS_XCLAW_MODE
     ? "День святого Валентина: Розы напечатаны, фиалки перенаправлены — я автоматизирую рутину, чтобы вы могли отдохнуть."
     : "Valentine's Day: Roses are typed, violets are piped—I'll automate the chores so you can relax.",
 } as const;
@@ -179,7 +179,7 @@ const RU_TAGLINES: string[] = [
   "Приветствую, профессор Фалкен",
 ];
 
-const TAGLINES = isXClawMode() ? RU_TAGLINES : EN_TAGLINES;
+const TAGLINES = IS_XCLAW_MODE ? RU_TAGLINES : EN_TAGLINES;
 
 type HolidayRule = (date: Date) => boolean;
 

@@ -1,3 +1,4 @@
+import { IS_XCLAW_MODE, isXClawMode, resolveTelegramNativeCommandAllowlist, resolveTelegramOwnerIds } from "../xclaw/mode.js";
 import crypto from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -26,14 +27,13 @@ import {
 } from "../utils.js";
 import { GATEWAY_CLIENT_MODES, GATEWAY_CLIENT_NAMES } from "../utils/message-channel.js";
 import { VERSION } from "../version.js";
-import { isXClawMode } from "../xclaw/mode.js";
 import type { NodeManagerChoice, OnboardMode, ResetScope } from "./onboard-types.js";
 
 export function guardCancel<T>(value: T | symbol, runtime: RuntimeEnv): T {
   if (isCancel(value)) {
     cancel(
-      stylePromptTitle(isXClawMode() ? "Настройка отменена." : "Setup cancelled.") ??
-        (isXClawMode() ? "Настройка отменена." : "Setup cancelled."),
+      stylePromptTitle(IS_XCLAW_MODE ? "Настройка отменена." : "Setup cancelled.") ??
+        (IS_XCLAW_MODE ? "Настройка отменена." : "Setup cancelled."),
     );
     runtime.exit(0);
     return null as never;
@@ -47,14 +47,14 @@ export function summarizeExistingConfig(config: OpenClawConfig): string {
   if (defaults?.workspace) {
     rows.push(
       shortenHomeInString(
-        `${isXClawMode() ? "рабочая директория" : "workspace"}: ${defaults.workspace}`,
+        `${IS_XCLAW_MODE ? "рабочая директория" : "workspace"}: ${defaults.workspace}`,
       ),
     );
   }
   if (defaults?.model) {
     const model = resolveAgentModelPrimaryValue(defaults.model);
     if (model) {
-      rows.push(shortenHomeInString(`${isXClawMode() ? "модель" : "model"}: ${model}`));
+      rows.push(shortenHomeInString(`${IS_XCLAW_MODE ? "модель" : "model"}: ${model}`));
     }
   }
   if (config.gateway?.mode) {
@@ -74,7 +74,7 @@ export function summarizeExistingConfig(config: OpenClawConfig): string {
   }
   return rows.length
     ? rows.join("\n")
-    : isXClawMode()
+    : IS_XCLAW_MODE
       ? "Настройки не обнаружены."
       : "No key settings detected.";
 }
@@ -121,7 +121,7 @@ export function printWizardHeader(runtime: RuntimeEnv) {
     "      \\ /      ",
     "       '       ",
     "▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀",
-    isXClawMode()
+    IS_XCLAW_MODE
       ? "                    📦 XCLAW 📦                     "
       : "                  📦 OPENCLAW 📦                    ",
     " ",
@@ -217,12 +217,12 @@ export function formatControlUiSshHint(params: {
     : undefined;
   const sshTarget = resolveSshTargetHint();
   return [
-    isXClawMode() ? "GUI не обнаружен. Откройте со своего компьютера:" : "No GUI detected. Open from your computer:",
+    IS_XCLAW_MODE ? "GUI не обнаружен. Откройте со своего компьютера:" : "No GUI detected. Open from your computer:",
     `ssh -N -L ${params.port}:127.0.0.1:${params.port} ${sshTarget}`,
-    isXClawMode() ? "Затем откройте:" : "Then open:",
+    IS_XCLAW_MODE ? "Затем откройте:" : "Then open:",
     localUrl,
     authedUrl,
-    isXClawMode() ? "Документация:" : "Docs:",
+    IS_XCLAW_MODE ? "Документация:" : "Docs:",
     "https://docs.openclaw.ai/gateway/remote",
     "https://docs.openclaw.ai/web/control-ui",
   ]

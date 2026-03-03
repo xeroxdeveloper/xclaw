@@ -1,3 +1,4 @@
+import { IS_XCLAW_MODE, isXClawMode, resolveTelegramNativeCommandAllowlist, resolveTelegramOwnerIds } from "../xclaw/mode.js";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import type { Bot, Context } from "grammy";
@@ -53,7 +54,6 @@ import {
 } from "./group-access.js";
 import { resolveTelegramGroupPromptSettings } from "./group-config-helpers.js";
 import { buildInlineKeyboard } from "./send.js";
-import { IS_XCLAW_MODE, resolveTelegramNativeCommandAllowlist, resolveTelegramOwnerIds } from "../xclaw/mode.js";
 import { withTelegramApiErrorLogging } from "./api-logging.js";
 import { deliverReplies } from "./bot/delivery.replies.js";
 import { normalizeDmAllowFromWithStore, isSenderAllowed } from "./bot-access.js";

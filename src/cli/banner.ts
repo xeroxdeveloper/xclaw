@@ -1,7 +1,7 @@
+import { IS_XCLAW_MODE, isXClawMode, resolveTelegramNativeCommandAllowlist, resolveTelegramOwnerIds } from "../xclaw/mode.js";
 import { resolveCommitHash } from "../infra/git-commit.js";
 import { visibleWidth } from "../terminal/ansi.js";
 import { isRich, theme } from "../terminal/theme.js";
-import { isXClawMode } from "../xclaw/mode.js";
 import { hasRootVersionAlias } from "./argv.js";
 import { pickTagline, type TaglineOptions } from "./tagline.js";
 
@@ -41,8 +41,8 @@ export function formatCliBannerLine(version: string, options: BannerOptions = {}
   const commitLabel = commit ?? "unknown";
   const tagline = pickTagline(options);
   const rich = options.richTty ?? isRich();
-  const title = isXClawMode() ? "📦 XClaw" : "📦 OpenClaw";
-  const prefix = isXClawMode() ? "📦 " : "📦 ";
+  const title = IS_XCLAW_MODE ? "📦 XClaw" : "📦 OpenClaw";
+  const prefix = IS_XCLAW_MODE ? "📦 " : "📦 ";
   const columns = options.columns ?? process.stdout.columns ?? 120;
   const plainFullLine = `${title} ${version} (${commitLabel}) — ${tagline}`;
   const fitsOnOneLine = visibleWidth(plainFullLine) <= columns;

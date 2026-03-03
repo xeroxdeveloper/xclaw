@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { IS_XCLAW_MODE, isXClawMode, resolveTelegramNativeCommandAllowlist, resolveTelegramOwnerIds } from "./xclaw/mode.js";
 import { spawn } from "node:child_process";
 import { enableCompileCache } from "node:module";
 import process from "node:process";
@@ -11,7 +12,6 @@ import { isTruthyEnvValue, normalizeEnv, registerSecretForMasking } from "./infr
 import { isMainModule } from "./infra/is-main.js";
 import { installProcessWarningFilter } from "./infra/warning-filter.js";
 import { attachChildProcessBridge } from "./process/child-process-bridge.js";
-import { isXClawMode } from "./xclaw/mode.js";
 
 const ENTRY_WRAPPER_PAIRS = [
   { wrapperBasename: "openclaw.mjs", entryBasename: "entry.js" },

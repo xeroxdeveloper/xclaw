@@ -1,3 +1,4 @@
+import { IS_XCLAW_MODE, isXClawMode, resolveTelegramNativeCommandAllowlist, resolveTelegramOwnerIds } from "../xclaw/mode.js";
 import fs from "node:fs";
 import { resolveContextTokensForModel } from "../agents/context.js";
 import { DEFAULT_CONTEXT_TOKENS, DEFAULT_MODEL, DEFAULT_PROVIDER } from "../agents/defaults.js";
@@ -656,7 +657,9 @@ export function buildStatusMessage(args: StatusArgs): string {
       } (${fallbackState.reason ?? "selected model unavailable"})`
     : null;
   const commit = resolveCommitHash();
-  const versionLine = `📦 OpenClaw ${VERSION}${commit ? ` (${commit})` : ""}`;
+  const IS_XCLAW = IS_XCLAW_MODE;
+  const title = IS_XCLAW ? "📦 XClaw Box Alpha" : "📦 OpenClaw";
+  const versionLine = `${title} ${VERSION}${commit ? ` (${commit})` : ""}`;
   const usagePair = formatUsagePair(inputTokens, outputTokens);
   const cacheLine = formatCacheLine(inputTokens, cacheRead, cacheWrite);
   const costLine = costLabel ? `💵 Cost: ${costLabel}` : null;
@@ -685,15 +688,25 @@ export function buildStatusMessage(args: StatusArgs): string {
     .join("\n");
 }
 
-const CATEGORY_LABELS: Record<CommandCategory, string> = {
-  session: "Session",
-  options: "Options",
-  status: "Status",
-  management: "Management",
-  media: "Media",
-  tools: "Tools",
-  docks: "Docks",
-};
+const CATEGORY_LABELS: Record<CommandCategory, string> = IS_XCLAW_MODE
+  ? {
+      session: "Сессия",
+      options: "Опции",
+      status: "Статус",
+      management: "Управление",
+      media: "Медиа",
+      tools: "Инструменты",
+      docks: "Доки",
+    }
+  : {
+      session: "Session",
+      options: "Options",
+      status: "Status",
+      management: "Management",
+      media: "Media",
+      tools: "Tools",
+      docks: "Docks",
+    };
 
 const CATEGORY_ORDER: CommandCategory[] = [
   "session",
@@ -721,33 +734,45 @@ function groupCommandsByCategory(
   return grouped;
 }
 
-export function buildHelpMessage(cfg?: OpenClawConfig): string {
-  const lines = ["ℹ️ Help", ""];
 
-  lines.push("Session");
-  lines.push("  /new  |  /reset  |  /compact [instructions]  |  /stop");
+// ... (skipping some imports)
+
+export function buildHelpMessage(cfg?: OpenClawConfig): string {
+  const IS_XCLAW = IS_XCLAW_MODE;
+  const lines = [IS_XCLAW ? "ℹ️ Справка XClaw" : "ℹ️ Help", ""];
+
+  lines.push(IS_XCLAW ? "Сессия" : "Session");
+  lines.push("  /new  |  /reset  |  /compact [инструкции]  |  /stop");
   lines.push("");
 
-  const optionParts = ["/think <level>", "/model <id>", "/verbose on|off"];
+  const optionParts = IS_XCLAW 
+    ? ["/think <уровень>", "/model <id>", "/verbose on|off", "/lang ru|en"]
+    : ["/think <level>", "/model <id>", "/verbose on|off"];
   if (isCommandFlagEnabled(cfg, "config")) {
     optionParts.push("/config");
   }
   if (isCommandFlagEnabled(cfg, "debug")) {
     optionParts.push("/debug");
   }
-  lines.push("Options");
+  lines.push(IS_XCLAW ? "Опции" : "Options");
   lines.push(`  ${optionParts.join("  |  ")}`);
   lines.push("");
 
-  lines.push("Status");
-  lines.push("  /status  |  /whoami  |  /context");
+  lines.push(IS_XCLAW ? "Статус" : "Status");
+  lines.push("  /status  |  /whoami  |  /context  |  /whois <id>");
   lines.push("");
 
-  lines.push("Skills");
-  lines.push("  /skill <name> [input]");
+  if (IS_XCLAW) {
+    lines.push("Владелец");
+    lines.push("  /xexec <команда>  |  /xupdate  |  /ghissue <заголовок>");
+    lines.push("");
+  }
+
+  lines.push(IS_XCLAW ? "Навыки" : "Skills");
+  lines.push(`  /skill <${IS_XCLAW ? "имя" : "name"}> [${IS_XCLAW ? "ввод" : "input"}]`);
 
   lines.push("");
-  lines.push("More: /commands for full list");
+  lines.push(IS_XCLAW ? "Больше: /commands для полного списка" : "More: /commands for full list");
 
   return lines.join("\n");
 }

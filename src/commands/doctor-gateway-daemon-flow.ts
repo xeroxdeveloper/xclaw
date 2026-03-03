@@ -1,4 +1,4 @@
-import { isXClawMode } from "../xclaw/mode.js";
+import { IS_XCLAW_MODE, isXClawMode, resolveTelegramNativeCommandAllowlist, resolveTelegramOwnerIds } from "../xclaw/mode.js";
 import { formatCliCommand } from "../cli/command-format.js";
 import type { OpenClawConfig } from "../config/config.js";
 import { resolveGatewayPort } from "../config/config.js";
@@ -57,21 +57,21 @@ async function maybeRepairLaunchAgentBootstrap(params: {
     return false;
   }
 
-  note(isXClawMode() ? "LaunchAgent указан в списке, но не загружен в launchd." : "LaunchAgent is listed but not loaded in launchd.", `${params.title} LaunchAgent`);
+  note(IS_XCLAW_MODE ? "LaunchAgent указан в списке, но не загружен в launchd." : "LaunchAgent is listed but not loaded in launchd.", `${params.title} LaunchAgent`);
 
   const shouldFix = await params.prompter.confirmSkipInNonInteractive({
-    message: isXClawMode() ? `Исправить запуск ${params.title} LaunchAgent сейчас?` : `Repair ${params.title} LaunchAgent bootstrap now?`,
+    message: IS_XCLAW_MODE ? `Исправить запуск ${params.title} LaunchAgent сейчас?` : `Repair ${params.title} LaunchAgent bootstrap now?`,
     initialValue: true,
   });
   if (!shouldFix) {
     return false;
   }
 
-  params.runtime.log(isXClawMode() ? `Настройка ${params.title} LaunchAgent...` : `Bootstrapping ${params.title} LaunchAgent...`);
+  params.runtime.log(IS_XCLAW_MODE ? `Настройка ${params.title} LaunchAgent...` : `Bootstrapping ${params.title} LaunchAgent...`);
   const repair = await repairLaunchAgentBootstrap({ env: params.env });
   if (!repair.ok) {
     params.runtime.error(
-      isXClawMode()
+      IS_XCLAW_MODE
         ? `Не удалось настроить ${params.title} LaunchAgent: ${repair.detail ?? "неизвестная ошибка"}`
         : `${params.title} LaunchAgent bootstrap failed: ${repair.detail ?? "unknown error"}`,
     );
@@ -80,11 +80,11 @@ async function maybeRepairLaunchAgentBootstrap(params: {
 
   const verified = await isLaunchAgentLoaded({ env: params.env });
   if (!verified) {
-    params.runtime.error(isXClawMode() ? `${params.title} LaunchAgent все еще не загружен после исправления.` : `${params.title} LaunchAgent still not loaded after repair.`);
+    params.runtime.error(IS_XCLAW_MODE ? `${params.title} LaunchAgent все еще не загружен после исправления.` : `${params.title} LaunchAgent still not loaded after repair.`);
     return false;
   }
 
-  note(isXClawMode() ? `${params.title} LaunchAgent исправлен.` : `${params.title} LaunchAgent repaired.`, `${params.title} LaunchAgent`);
+  note(IS_XCLAW_MODE ? `${params.title} LaunchAgent исправлен.` : `${params.title} LaunchAgent repaired.`, `${params.title} LaunchAgent`);
   return true;
 }
 
@@ -141,11 +141,11 @@ export async function maybeRepairGatewayDaemon(params: {
     const port = resolveGatewayPort(params.cfg, process.env);
     const diagnostics = await inspectPortUsage(port);
     if (diagnostics.status === "busy") {
-      note(formatPortDiagnostics(diagnostics).join("\n"), isXClawMode() ? "Порт шлюза" : "Gateway port");
+      note(formatPortDiagnostics(diagnostics).join("\n"), IS_XCLAW_MODE ? "Порт шлюза" : "Gateway port");
     } else if (loaded && serviceRuntime?.status === "running") {
       const lastError = await readLastGatewayErrorLine(process.env);
       if (lastError) {
-        note(isXClawMode() ? `Последняя ошибка шлюза: ${lastError}` : `Last gateway error: ${lastError}`, isXClawMode() ? "Шлюз" : "Gateway");
+        note(IS_XCLAW_MODE ? `Последняя ошибка шлюза: ${lastError}` : `Last gateway error: ${lastError}`, IS_XCLAW_MODE ? "Шлюз" : "Gateway");
       }
     }
   }
@@ -155,20 +155,20 @@ export async function maybeRepairGatewayDaemon(params: {
       const systemdAvailable = await isSystemdUserServiceAvailable().catch(() => false);
       if (!systemdAvailable) {
         const wsl = await isWSL();
-        note(renderSystemdUnavailableHints({ wsl }).join("\n"), isXClawMode() ? "Шлюз" : "Gateway");
+        note(renderSystemdUnavailableHints({ wsl }).join("\n"), IS_XCLAW_MODE ? "Шлюз" : "Gateway");
         return;
       }
     }
-    note(isXClawMode() ? "Служба шлюза не установлена." : "Gateway service not installed.", isXClawMode() ? "Шлюз" : "Gateway");
+    note(IS_XCLAW_MODE ? "Служба шлюза не установлена." : "Gateway service not installed.", IS_XCLAW_MODE ? "Шлюз" : "Gateway");
     if (params.cfg.gateway?.mode !== "remote") {
       const install = await params.prompter.confirmSkipInNonInteractive({
-        message: isXClawMode() ? "Установить службу шлюза сейчас?" : "Install gateway service now?",
+        message: IS_XCLAW_MODE ? "Установить службу шлюза сейчас?" : "Install gateway service now?",
         initialValue: true,
       });
       if (install) {
         const daemonRuntime = await params.prompter.select<GatewayDaemonRuntime>(
           {
-            message: isXClawMode() ? "Среда выполнения службы шлюза" : "Gateway service runtime",
+            message: IS_XCLAW_MODE ? "Среда выполнения службы шлюза" : "Gateway service runtime",
             options: GATEWAY_DAEMON_RUNTIME_OPTIONS,
             initialValue: DEFAULT_GATEWAY_DAEMON_RUNTIME,
           },
@@ -192,8 +192,8 @@ export async function maybeRepairGatewayDaemon(params: {
             environment,
           });
         } catch (err) {
-          note(isXClawMode() ? `Не удалось установить службу шлюза: ${String(err)}` : `Gateway service install failed: ${String(err)}`, isXClawMode() ? "Шлюз" : "Gateway");
-          note(gatewayInstallErrorHint(), isXClawMode() ? "Шлюз" : "Gateway");
+          note(IS_XCLAW_MODE ? `Не удалось установить службу шлюза: ${String(err)}` : `Gateway service install failed: ${String(err)}`, IS_XCLAW_MODE ? "Шлюз" : "Gateway");
+          note(gatewayInstallErrorHint(), IS_XCLAW_MODE ? "Шлюз" : "Gateway");
         }
       }
     }
@@ -208,15 +208,15 @@ export async function maybeRepairGatewayDaemon(params: {
   if (summary || hints.length > 0) {
     const lines: string[] = [];
     if (summary) {
-      lines.push(`${isXClawMode() ? "Среда" : "Runtime"}: ${summary}`);
+      lines.push(`${IS_XCLAW_MODE ? "Среда" : "Runtime"}: ${summary}`);
     }
     lines.push(...hints);
-    note(lines.join("\n"), isXClawMode() ? "Шлюз" : "Gateway");
+    note(lines.join("\n"), IS_XCLAW_MODE ? "Шлюз" : "Gateway");
   }
 
   if (serviceRuntime?.status !== "running") {
     const start = await params.prompter.confirmSkipInNonInteractive({
-      message: isXClawMode() ? "Запустить службу шлюза сейчас?" : "Start gateway service now?",
+      message: IS_XCLAW_MODE ? "Запустить службу шлюза сейчас?" : "Start gateway service now?",
       initialValue: true,
     });
     if (start) {
@@ -230,18 +230,18 @@ export async function maybeRepairGatewayDaemon(params: {
 
   if (process.platform === "darwin") {
     const label = resolveGatewayLaunchAgentLabel(process.env.OPENCLAW_PROFILE);
-    const cmd = isXClawMode() ? "xclaw" : "openclaw";
+    const cmd = IS_XCLAW_MODE ? "xclaw" : "openclaw";
     note(
-      isXClawMode() 
+      IS_XCLAW_MODE 
         ? `LaunchAgent загружен; остановка требует команды "${formatCliCommand(`${cmd} gateway stop`)}" или launchctl bootout gui/$UID/${label}.`
         : `LaunchAgent loaded; stopping requires "${formatCliCommand("openclaw gateway stop")}" or launchctl bootout gui/$UID/${label}.`,
-      isXClawMode() ? "Шлюз" : "Gateway",
+      IS_XCLAW_MODE ? "Шлюз" : "Gateway",
     );
   }
 
   if (serviceRuntime?.status === "running") {
     const restart = await params.prompter.confirmSkipInNonInteractive({
-      message: isXClawMode() ? "Перезапустить службу шлюза сейчас?" : "Restart gateway service now?",
+      message: IS_XCLAW_MODE ? "Перезапустить службу шлюза сейчас?" : "Restart gateway service now?",
       initialValue: true,
     });
     if (restart) {
@@ -255,8 +255,8 @@ export async function maybeRepairGatewayDaemon(params: {
       } catch (err) {
         const message = String(err);
         if (message.includes("gateway closed")) {
-          note(isXClawMode() ? "Шлюз не запущен." : "Gateway not running.", isXClawMode() ? "Шлюз" : "Gateway");
-          note(params.gatewayDetailsMessage, isXClawMode() ? "Подключение к шлюзу" : "Gateway connection");
+          note(IS_XCLAW_MODE ? "Шлюз не запущен." : "Gateway not running.", IS_XCLAW_MODE ? "Шлюз" : "Gateway");
+          note(params.gatewayDetailsMessage, IS_XCLAW_MODE ? "Подключение к шлюзу" : "Gateway connection");
         } else {
           params.runtime.error(formatHealthCheckFailure(err));
         }

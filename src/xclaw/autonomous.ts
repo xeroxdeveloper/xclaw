@@ -7,7 +7,7 @@ import { resolveHeartbeatSenderContext } from "../infra/outbound/targets.js";
 import { createSubsystemLogger } from "../logging/subsystem.js";
 import { CommandLane } from "../process/lanes.js";
 import { defaultRuntime } from "../runtime.js";
-import { isXClawMode } from "./mode.js";
+import { IS_XCLAW_MODE } from "./mode.js";
 
 const log = createSubsystemLogger("xclaw/autonomous");
 
@@ -16,7 +16,7 @@ const log = createSubsystemLogger("xclaw/autonomous");
  * Allows the agent to post to specific groups even without being messaged.
  */
 export async function runXClawAutonomousCheck() {
-  if (!isXClawMode()) {
+  if (!IS_XCLAW_MODE) {
     return;
   }
 

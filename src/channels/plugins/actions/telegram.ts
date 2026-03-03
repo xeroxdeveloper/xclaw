@@ -1,3 +1,4 @@
+import { IS_XCLAW_MODE, isXClawMode, resolveTelegramNativeCommandAllowlist, resolveTelegramOwnerIds } from "../../../xclaw/mode.js";
 import {
   readNumberParam,
   readStringArrayParam,

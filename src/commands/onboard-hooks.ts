@@ -1,4 +1,4 @@
-import { isXClawMode } from "../xclaw/mode.js";
+import { IS_XCLAW_MODE, isXClawMode, resolveTelegramNativeCommandAllowlist, resolveTelegramOwnerIds } from "../xclaw/mode.js";
 import { resolveAgentWorkspaceDir, resolveDefaultAgentId } from "../agents/agent-scope.js";
 import { formatCliCommand } from "../cli/command-format.js";
 import type { OpenClawConfig } from "../config/config.js";
@@ -12,7 +12,7 @@ export async function setupInternalHooks(
   prompter: WizardPrompter,
 ): Promise<OpenClawConfig> {
   await prompter.note(
-    isXClawMode()
+    IS_XCLAW_MODE
       ? [
           "Хуки позволяют автоматизировать действия при выполнении команд агента.",
           "Пример: Сохранить контекст сессии в память при выполнении /new или /reset.",
@@ -25,7 +25,7 @@ export async function setupInternalHooks(
           "",
           "Learn more: https://docs.openclaw.ai/automation/hooks",
         ].join("\n"),
-    isXClawMode() ? "Хуки" : "Hooks",
+    IS_XCLAW_MODE ? "Хуки" : "Hooks",
   );
 
   // Discover available hooks using the hook discovery system
@@ -37,18 +37,18 @@ export async function setupInternalHooks(
 
   if (eligibleHooks.length === 0) {
     await prompter.note(
-      isXClawMode()
+      IS_XCLAW_MODE
         ? "Подходящих хуков не найдено. Вы можете настроить их позже в конфиге."
         : "No eligible hooks found. You can configure hooks later in your config.",
-      isXClawMode() ? "Нет доступных хуков" : "No Hooks Available",
+      IS_XCLAW_MODE ? "Нет доступных хуков" : "No Hooks Available",
     );
     return cfg;
   }
 
   const toEnable = await prompter.multiselect({
-    message: isXClawMode() ? "Включить хуки?" : "Enable hooks?",
+    message: IS_XCLAW_MODE ? "Включить хуки?" : "Enable hooks?",
     options: [
-      { value: "__skip__", label: isXClawMode() ? "Пропустить" : "Skip for now" },
+      { value: "__skip__", label: IS_XCLAW_MODE ? "Пропустить" : "Skip for now" },
       ...eligibleHooks.map((hook) => ({
         value: hook.name,
         label: `${hook.emoji ?? "🔗"} ${hook.name}`,
@@ -80,7 +80,7 @@ export async function setupInternalHooks(
   };
 
   await prompter.note(
-    isXClawMode()
+    IS_XCLAW_MODE
       ? [
           `Включено ${selected.length} хук${selected.length === 1 ? "" : selected.length < 5 ? "а" : "ов"}: ${selected.join(", ")}`,
           "",
@@ -97,7 +97,7 @@ export async function setupInternalHooks(
           `  ${formatCliCommand("openclaw hooks enable <name>")}`,
           `  ${formatCliCommand("openclaw hooks disable <name>")}`,
         ].join("\n"),
-    isXClawMode() ? "Хуки настроены" : "Hooks Configured",
+    IS_XCLAW_MODE ? "Хуки настроены" : "Hooks Configured",
   );
 
   return next;

@@ -1,10 +1,10 @@
-import { isXClawMode } from "../xclaw/mode.js";
+import { IS_XCLAW_MODE, isXClawMode, resolveTelegramNativeCommandAllowlist, resolveTelegramOwnerIds } from "../xclaw/mode.js";
 import fs from "node:fs";
 import path from "node:path";
 import { DEFAULT_AGENTS_FILENAME } from "../agents/workspace.js";
 import { shortenHomePath } from "../utils.js";
 
-export const MEMORY_SYSTEM_PROMPT = isXClawMode()
+export const MEMORY_SYSTEM_PROMPT = IS_XCLAW_MODE
   ? [
       "Система памяти не найдена в рабочей области.",
       "Добавьте инструкции памяти в вашего агента.",
@@ -57,7 +57,7 @@ export function detectLegacyWorkspaceDirs(params: {
 }
 
 export function formatLegacyWorkspaceWarning(detection: LegacyWorkspaceDetection): string {
-  return isXClawMode() 
+  return IS_XCLAW_MODE 
     ? [
         "Обнаружены лишние директории рабочей области (могут содержать старые файлы агентов):",
         ...detection.legacyDirs.map((dir) => `- ${shortenHomePath(dir)}`),

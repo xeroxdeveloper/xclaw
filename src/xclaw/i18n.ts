@@ -1,7 +1,7 @@
+import { isXClawMode } from "./mode.js";
 import { readFileSync, existsSync } from "node:fs";
 import JSON5 from "json5";
 import { CONFIG_PATH } from "../config/config.js";
-import { isXClawMode } from "./mode.js";
 
 let currentLang = "ru";
 
@@ -118,6 +118,14 @@ const translations: Record<string, Record<string, string>> = {
     "sessions.description": "List stored conversation sessions",
     "browser.description": "Manage OpenClaw's dedicated browser (Chrome/Chromium)",
     "lang.description": "Set CLI language (ru/en)",
+    "update.description": "Update XClaw to the latest version",
+    "help.usage": "Usage:",
+    "help.options": "Options:",
+    "help.commands": "Commands:",
+    "help.arguments": "Arguments:",
+    "help.examples": "Examples:",
+    "help.docs": "Docs:",
+    "help.hint": "Hint: commands suffixed with * have subcommands. Run <command> --help for details.",
     "auth.choice.message": "Model/auth provider",
     "auth.method.message": "{label} auth method",
     "auth.skip": "Skip for now",
@@ -141,7 +149,7 @@ const translations: Record<string, Record<string, string>> = {
     "channel.select.message": "Select channel (QuickStart)",
     "channel.selected.title": "Selected channels",
     "onboard.success.title": "Onboarding complete!",
-    "onboard.success.message": "XClaw Box Alpha is ready. Use '/help' in Telegram.",
+    "onboard.success.message": "XClaw Diamond Edition is ready. Use '/help' in Telegram.",
     "onboard.risk.message": "I understand this is personal-by-default and shared/multi-user use requires lock-down. Continue?",
     "onboard.invalid.config": "Invalid config",
     "onboard.config.issues": "Config issues",
@@ -155,6 +163,8 @@ const translations: Record<string, Record<string, string>> = {
     "onboard.reset.creds": "Config + creds + sessions",
     "onboard.reset.full": "Full reset (all data)",
     "onboard.workspace.message": "Workspace directory",
+    "auth.no_api.hint": "Soon...",
+    "auth.local_ai.hint": "local model",
   },
 };
 

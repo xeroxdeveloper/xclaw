@@ -1,3 +1,4 @@
+import { IS_XCLAW_MODE, isXClawMode, resolveTelegramNativeCommandAllowlist, resolveTelegramOwnerIds } from "../xclaw/mode.js";
 import { ensureAuthProfileStore, listProfilesForProvider } from "../agents/auth-profiles.js";
 import { DEFAULT_MODEL, DEFAULT_PROVIDER } from "../agents/defaults.js";
 import { getCustomProviderApiKey, resolveEnvApiKey } from "../agents/model-auth.js";
@@ -12,7 +13,6 @@ import {
 import type { OpenClawConfig } from "../config/config.js";
 import { resolveAgentModelPrimaryValue } from "../config/model-input.js";
 import type { WizardPrompter, WizardSelectOption } from "../wizard/prompts.js";
-import { isXClawMode } from "../xclaw/mode.js";
 import { t } from "../xclaw/i18n.js";
 import { formatTokenK } from "./models/shared.js";
 import { OPENAI_CODEX_DEFAULT_MODEL } from "./openai-codex-model-default.js";
@@ -165,7 +165,7 @@ async function promptManualModel(params: {
 }): Promise<PromptDefaultModelResult> {
   const modelInput = await params.prompter.text({
     message: params.allowBlank
-      ? isXClawMode()
+      ? IS_XCLAW_MODE
         ? "Модель по умолчанию (оставьте пустым чтобы не менять)"
         : "Default model (blank to keep)"
       : t("model.default.message"),
@@ -242,15 +242,15 @@ export async function promptDefaultModel(
     !hasPreferredProvider && providers.length > 1 && models.length > PROVIDER_FILTER_THRESHOLD;
   if (shouldPromptProvider) {
     const selection = await params.prompter.select({
-      message: isXClawMode() ? "Фильтр моделей по провайдеру" : "Filter models by provider",
+      message: IS_XCLAW_MODE ? "Фильтр моделей по провайдеру" : "Filter models by provider",
       options: [
-        { value: "*", label: isXClawMode() ? "Все провайдеры" : "All providers" },
+        { value: "*", label: IS_XCLAW_MODE ? "Все провайдеры" : "All providers" },
         ...providers.map((provider) => {
           const count = models.filter((entry) => entry.provider === provider).length;
           return {
             value: provider,
             label: provider,
-            hint: isXClawMode()
+            hint: IS_XCLAW_MODE
               ? `${count} модел${count === 1 ? "ь" : count < 5 ? "и" : "ей"}`
               : `${count} model${count === 1 ? "" : "s"}`,
           };
@@ -285,15 +285,15 @@ export async function promptDefaultModel(
     options.push({
       value: KEEP_VALUE,
       label: configuredRaw
-        ? isXClawMode()
+        ? IS_XCLAW_MODE
           ? `Оставить текущую (${configuredRaw})`
           : `Keep current (${configuredRaw})`
-        : isXClawMode()
+        : IS_XCLAW_MODE
           ? `Оставить текущую (по умолчанию: ${resolvedKey})`
           : `Keep current (default: ${resolvedKey})`,
       hint:
         configuredRaw && configuredRaw !== resolvedKey
-          ? isXClawMode()
+          ? IS_XCLAW_MODE
             ? `будет ${resolvedKey}`
             : `resolves to ${resolvedKey}`
           : undefined,
@@ -302,7 +302,7 @@ export async function promptDefaultModel(
   if (includeManual) {
     options.push({
       value: MANUAL_VALUE,
-      label: isXClawMode() ? "Ввести модель вручную" : "Enter model manually",
+      label: IS_XCLAW_MODE ? "Ввести модель вручную" : "Enter model manually",
     });
   }
   if (includeVllm && agentDir) {

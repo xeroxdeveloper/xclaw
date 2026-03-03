@@ -1,3 +1,4 @@
+import { IS_XCLAW_MODE, isXClawMode, resolveTelegramNativeCommandAllowlist, resolveTelegramOwnerIds } from "../xclaw/mode.js";
 import type { Bot } from "grammy";
 import { resolveAckReaction } from "../agents/identity.js";
 import {
@@ -27,7 +28,6 @@ import {
   createStatusReactionController,
   type StatusReactionController,
 } from "../channels/status-reactions.js";
-import { isXClawMode } from "../xclaw/mode.js";
 import type { OpenClawConfig } from "../config/config.js";
 import { loadConfig } from "../config/config.js";
 import { readSessionUpdatedAt, resolveStorePath } from "../config/sessions.js";
@@ -498,12 +498,12 @@ export const buildTelegramMessageContext = async ({
     channel: "telegram",
     accountId: account.accountId,
   });
-  if (isXClawMode() && !ackReaction) {
+  if (IS_XCLAW_MODE && !ackReaction) {
     ackReaction = "👀";
   }
   const removeAckAfterReply = cfg.messages?.removeAckAfterReply ?? false;
   const shouldAckReaction = () => {
-    if (isXClawMode() && commandAuthorized) {
+    if (IS_XCLAW_MODE && commandAuthorized) {
       return true;
     }
     return Boolean(
@@ -535,7 +535,7 @@ export const buildTelegramMessageContext = async ({
   // Status Reactions controller (lifecycle reactions)
   const statusReactionsConfig = cfg.messages?.statusReactions;
   const statusReactionsEnabled =
-    (statusReactionsConfig?.enabled === true || isXClawMode()) &&
+    (statusReactionsConfig?.enabled === true || IS_XCLAW_MODE) &&
     Boolean(reactionApi) &&
     shouldAckReaction();
   const resolvedStatusReactionEmojis = resolveTelegramStatusReactionEmojis({
