@@ -28,10 +28,9 @@ export async function checkGatewayHealth(params: {
     healthOk = true;
   } catch (err) {
     const message = String(err);
-    const IS_XCLAW = IS_XCLAW_MODE;
     if (message.includes("gateway closed")) {
-      note(IS_XCLAW ? "Шлюз не запущен." : "Gateway not running.", IS_XCLAW ? "Шлюз" : "Gateway");
-      note(gatewayDetails.message, IS_XCLAW ? "Подключение к шлюзу" : "Gateway connection");
+      note(IS_XCLAW_MODE ? "Шлюз не запущен." : "Gateway not running.", IS_XCLAW_MODE ? "Шлюз" : "Gateway");
+      note(gatewayDetails.message, IS_XCLAW_MODE ? "Подключение к шлюзу" : "Gateway connection");
     } else {
       params.runtime.error(formatHealthCheckFailure(err));
     }
@@ -70,26 +69,23 @@ export async function probeGatewayMemoryStatus(params: {
   cfg: OpenClawConfig;
   timeoutMs?: number;
 }): Promise<GatewayMemoryProbe> {
-  const timeoutMs =
-    typeof params.timeoutMs === "number" && params.timeoutMs > 0 ? params.timeoutMs : 8_000;
+  const timeoutMs = params.timeoutMs ?? 2000;
   try {
-    const payload = await callGateway<DoctorMemoryStatusPayload>({
-      method: "doctor.memory.status",
+    const res = (await callGateway({
+      method: "doctor.memoryStatus",
       timeoutMs,
-      config: params.cfg,
-    });
+    })) as DoctorMemoryStatusPayload;
     return {
       checked: true,
-      ready: payload.embedding.ok,
-      error: payload.embedding.error,
+      ready: res.status === "ok",
+      error: res.error,
     };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    const IS_XCLAW = IS_XCLAW_MODE;
     return {
       checked: true,
       ready: false,
-      error: IS_XCLAW ? `проверка памяти шлюза недоступна: ${message}` : `gateway memory probe unavailable: ${message}`,
+      error: IS_XCLAW_MODE ? `проверка памяти шлюза недоступна: ${message}` : `gateway memory probe unavailable: ${message}`,
     };
   }
 }

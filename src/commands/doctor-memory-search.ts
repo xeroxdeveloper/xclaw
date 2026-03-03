@@ -1,3 +1,4 @@
+import { IS_XCLAW_MODE, isXClawMode } from "../xclaw/mode.js";
 import fsSync from "node:fs";
 import { resolveAgentDir, resolveDefaultAgentId } from "../agents/agent-scope.js";
 import { resolveMemorySearchConfig } from "../agents/memory-search.js";
@@ -26,9 +27,10 @@ export async function noteMemorySearchHealth(
   const agentDir = resolveAgentDir(cfg, agentId);
   const resolved = resolveMemorySearchConfig(cfg, agentId);
   const hasRemoteApiKey = Boolean(resolved?.remote?.apiKey?.trim());
+  const cmd = IS_XCLAW_MODE ? "xclaw" : "openclaw";
 
   if (!resolved) {
-    note("Memory search is explicitly disabled (enabled: false).", "Memory search");
+    note(IS_XCLAW_MODE ? "Поиск по памяти явно отключен (enabled: false)." : "Memory search is explicitly disabled (enabled: false).", IS_XCLAW_MODE ? "Поиск по памяти" : "Memory search");
     return;
   }
 
@@ -46,16 +48,26 @@ export async function noteMemorySearchHealth(
         return; // local model file exists
       }
       note(
-        [
-          'Memory search provider is set to "local" but no local model file was found.',
-          "",
-          "Fix (pick one):",
-          `- Install node-llama-cpp and set a local model path in config`,
-          `- Switch to a remote provider: ${formatCliCommand("openclaw config set agents.defaults.memorySearch.provider openai")}`,
-          "",
-          `Verify: ${formatCliCommand("openclaw memory status --deep")}`,
-        ].join("\n"),
-        "Memory search",
+        IS_XCLAW_MODE 
+          ? [
+              'Провайдер поиска по памяти установлен в "local", но файл модели не найден.',
+              "",
+              "Исправьте (выберите один вариант):",
+              `- Установите node-llama-cpp и укажите путь к локальной модели в конфиге`,
+              `- Переключитесь на удаленного провайдера: ${formatCliCommand(`${cmd} config set agents.defaults.memorySearch.provider openai`)}`,
+              "",
+              `Проверка: ${formatCliCommand(`${cmd} memory status --deep`)}`,
+            ].join("\n")
+          : [
+              'Memory search provider is set to "local" but no local model file was found.',
+              "",
+              "Fix (pick one):",
+              `- Install node-llama-cpp and set a local model path in config`,
+              `- Switch to a remote provider: ${formatCliCommand("openclaw config set agents.defaults.memorySearch.provider openai")}`,
+              "",
+              `Verify: ${formatCliCommand("openclaw memory status --deep")}`,
+            ].join("\n"),
+        IS_XCLAW_MODE ? "Поиск по памяти" : "Memory search",
       );
       return;
     }
@@ -65,31 +77,50 @@ export async function noteMemorySearchHealth(
     }
     if (opts?.gatewayMemoryProbe?.checked && opts.gatewayMemoryProbe.ready) {
       note(
-        [
-          `Memory search provider is set to "${resolved.provider}" but the API key was not found in the CLI environment.`,
-          "The running gateway reports memory embeddings are ready for the default agent.",
-          `Verify: ${formatCliCommand("openclaw memory status --deep")}`,
-        ].join("\n"),
-        "Memory search",
+        IS_XCLAW_MODE 
+          ? [
+              `Провайдер поиска по памяти установлен в "${resolved.provider}", но API ключ не найден в окружении CLI.`,
+              "Работающий шлюз сообщает, что эмбеддинги памяти готовы для агента по умолчанию.",
+              `Проверка: ${formatCliCommand(`${cmd} memory status --deep`)}`,
+            ].join("\n")
+          : [
+              `Memory search provider is set to "${resolved.provider}" but the API key was not found in the CLI environment.`,
+              "The running gateway reports memory embeddings are ready for the default agent.",
+              `Verify: ${formatCliCommand("openclaw memory status --deep")}`,
+            ].join("\n"),
+        IS_XCLAW_MODE ? "Поиск по памяти" : "Memory search",
       );
       return;
     }
     const gatewayProbeWarning = buildGatewayProbeWarning(opts?.gatewayMemoryProbe);
     const envVar = providerEnvVar(resolved.provider);
     note(
-      [
-        `Memory search provider is set to "${resolved.provider}" but no API key was found.`,
-        `Semantic recall will not work without a valid API key.`,
-        gatewayProbeWarning ? gatewayProbeWarning : null,
-        "",
-        "Fix (pick one):",
-        `- Set ${envVar} in your environment`,
-        `- Configure credentials: ${formatCliCommand("openclaw configure --section model")}`,
-        `- To disable: ${formatCliCommand("openclaw config set agents.defaults.memorySearch.enabled false")}`,
-        "",
-        `Verify: ${formatCliCommand("openclaw memory status --deep")}`,
-      ].join("\n"),
-      "Memory search",
+      IS_XCLAW_MODE 
+        ? [
+            `Провайдер поиска по памяти установлен в "${resolved.provider}", но API ключ не найден.`,
+            `Семантический поиск не будет работать без валидного API ключа.`,
+            gatewayProbeWarning ? gatewayProbeWarning : null,
+            "",
+            "Исправьте (выберите один вариант):",
+            `- Установите ${envVar} в вашем окружении`,
+            `- Настройте учетные данные: ${formatCliCommand(`${cmd} configure --section model`)}`,
+            `- Чтобы отключить: ${formatCliCommand(`${cmd} config set agents.defaults.memorySearch.enabled false`)}`,
+            "",
+            `Проверка: ${formatCliCommand(`${cmd} memory status --deep`)}`,
+          ].filter(l => l !== null).join("\n")
+        : [
+            `Memory search provider is set to "${resolved.provider}" but no API key was found.`,
+            `Semantic recall will not work without a valid API key.`,
+            gatewayProbeWarning ? gatewayProbeWarning : null,
+            "",
+            "Fix (pick one):",
+            `- Set ${envVar} in your environment`,
+            `- Configure credentials: ${formatCliCommand("openclaw configure --section model")}`,
+            `- To disable: ${formatCliCommand("openclaw config set agents.defaults.memorySearch.enabled false")}`,
+            "",
+            `Verify: ${formatCliCommand("openclaw memory status --deep")}`,
+          ].join("\n"),
+      IS_XCLAW_MODE ? "Поиск по памяти" : "Memory search",
     );
     return;
   }
@@ -106,32 +137,52 @@ export async function noteMemorySearchHealth(
 
   if (opts?.gatewayMemoryProbe?.checked && opts.gatewayMemoryProbe.ready) {
     note(
-      [
-        'Memory search provider is set to "auto" but the API key was not found in the CLI environment.',
-        "The running gateway reports memory embeddings are ready for the default agent.",
-        `Verify: ${formatCliCommand("openclaw memory status --deep")}`,
-      ].join("\n"),
-      "Memory search",
+      IS_XCLAW_MODE 
+        ? [
+            'Провайдер поиска по памяти установлен в "auto", но API ключ не найден в окружении CLI.',
+            "Работающий шлюз сообщает, что эмбеддинги памяти готовы для агента по умолчанию.",
+            `Проверка: ${formatCliCommand(`${cmd} memory status --deep`)}`,
+          ].join("\n")
+        : [
+            'Memory search provider is set to "auto" but the API key was not found in the CLI environment.',
+            "The running gateway reports memory embeddings are ready for the default agent.",
+            `Verify: ${formatCliCommand("openclaw memory status --deep")}`,
+          ].join("\n"),
+      IS_XCLAW_MODE ? "Поиск по памяти" : "Memory search",
     );
     return;
   }
   const gatewayProbeWarning = buildGatewayProbeWarning(opts?.gatewayMemoryProbe);
 
   note(
-    [
-      "Memory search is enabled but no embedding provider is configured.",
-      "Semantic recall will not work without an embedding provider.",
-      gatewayProbeWarning ? gatewayProbeWarning : null,
-      "",
-      "Fix (pick one):",
-      "- Set OPENAI_API_KEY, GEMINI_API_KEY, VOYAGE_API_KEY, or MISTRAL_API_KEY in your environment",
-      `- Configure credentials: ${formatCliCommand("openclaw configure --section model")}`,
-      `- For local embeddings: configure agents.defaults.memorySearch.provider and local model path`,
-      `- To disable: ${formatCliCommand("openclaw config set agents.defaults.memorySearch.enabled false")}`,
-      "",
-      `Verify: ${formatCliCommand("openclaw memory status --deep")}`,
-    ].join("\n"),
-    "Memory search",
+    IS_XCLAW_MODE 
+      ? [
+          "Поиск по памяти включен, но провайдер эмбеддингов не настроен.",
+          "Семантический поиск не будет работать без провайдера эмбеддингов.",
+          gatewayProbeWarning ? gatewayProbeWarning : null,
+          "",
+          "Исправьте (выберите один вариант):",
+          "- Установите OPENAI_API_KEY или GEMINI_API_KEY в вашем окружении",
+          `- Настройте учетные данные: ${formatCliCommand(`${cmd} configure --section model`)}`,
+          `- Для локальных эмбеддингов: настройте agents.defaults.memorySearch.provider и путь к модели`,
+          `- Чтобы отключить: ${formatCliCommand(`${cmd} config set agents.defaults.memorySearch.enabled false`)}`,
+          "",
+          `Проверка: ${formatCliCommand(`${cmd} memory status --deep`)}`,
+        ].filter(l => l !== null).join("\n")
+      : [
+          "Memory search is enabled but no embedding provider is configured.",
+          "Semantic recall will not work without an embedding provider.",
+          gatewayProbeWarning ? gatewayProbeWarning : null,
+          "",
+          "Fix (pick one):",
+          "- Set OPENAI_API_KEY, GEMINI_API_KEY, VOYAGE_API_KEY, or MISTRAL_API_KEY in your environment",
+          `- Configure credentials: ${formatCliCommand("openclaw configure --section model")}`,
+          `- For local embeddings: configure agents.defaults.memorySearch.provider and local model path`,
+          `- To disable: ${formatCliCommand("openclaw config set agents.defaults.memorySearch.enabled false")}`,
+          "",
+          `Verify: ${formatCliCommand("openclaw memory status --deep")}`,
+        ].join("\n"),
+    IS_XCLAW_MODE ? "Поиск по памяти" : "Memory search",
   );
 }
 
@@ -196,6 +247,6 @@ function buildGatewayProbeWarning(
   }
   const detail = probe.error?.trim();
   return detail
-    ? `Gateway memory probe for default agent is not ready: ${detail}`
-    : "Gateway memory probe for default agent is not ready.";
+    ? IS_XCLAW_MODE ? `Проверка памяти шлюза для агента по умолчанию не готова: ${detail}` : `Gateway memory probe for default agent is not ready: ${detail}`
+    : IS_XCLAW_MODE ? "Проверка памяти шлюза для агента по умолчанию не готова." : "Gateway memory probe for default agent is not ready.";
 }

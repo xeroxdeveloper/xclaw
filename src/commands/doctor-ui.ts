@@ -1,3 +1,4 @@
+import { IS_XCLAW_MODE, isXClawMode } from "../xclaw/mode.js";
 import fs from "node:fs/promises";
 import path from "node:path";
 import {
@@ -38,24 +39,29 @@ export async function maybeRepairUiProtocolFreshness(
     ]);
 
     if (schemaStats && !uiStats) {
-      note(["- Control UI assets are missing.", "- Run: pnpm ui:build"].join("\n"), "UI");
+      note(
+        IS_XCLAW_MODE 
+          ? ["- Отсутствуют файлы веб-интерфейса.", "- Выполните: pnpm ui:build"].join("\n")
+          : ["- Control UI assets are missing.", "- Run: pnpm ui:build"].join("\n"),
+        "UI",
+      );
 
       // In slim/docker environments we may not have the UI source tree. Trying
       // to build would fail (and spam logs), so skip the interactive repair.
       const uiSourcesPath = path.join(root, "ui/package.json");
       const uiSourcesExist = await fs.stat(uiSourcesPath).catch(() => null);
       if (!uiSourcesExist) {
-        note("Skipping UI build: ui/ sources not present.", "UI");
+        note(IS_XCLAW_MODE ? "Пропуск сборки UI: исходники ui/ не найдены." : "Skipping UI build: ui/ sources not present.", "UI");
         return;
       }
 
       const shouldRepair = await prompter.confirmRepair({
-        message: "Build Control UI assets now?",
+        message: IS_XCLAW_MODE ? "Собрать файлы веб-интерфейса сейчас?" : "Build Control UI assets now?",
         initialValue: true,
       });
 
       if (shouldRepair) {
-        note("Building Control UI assets... (this may take a moment)", "UI");
+        note(IS_XCLAW_MODE ? "Сборка веб-интерфейса... (это может занять время)" : "Building Control UI assets... (this may take a moment)", "UI");
         const uiScriptPath = path.join(root, "scripts/ui.js");
         const buildResult = await runCommandWithTimeout([process.execPath, uiScriptPath, "build"], {
           cwd: root,
@@ -63,10 +69,10 @@ export async function maybeRepairUiProtocolFreshness(
           env: { ...process.env, FORCE_COLOR: "1" },
         });
         if (buildResult.code === 0) {
-          note("UI build complete.", "UI");
+          note(IS_XCLAW_MODE ? "Сборка UI завершена." : "UI build complete.", "UI");
         } else {
           const details = [
-            `UI build failed (exit ${buildResult.code ?? "unknown"}).`,
+            IS_XCLAW_MODE ? `Ошибка сборки UI (exit ${buildResult.code ?? "неизвестно"}).` : `UI build failed (exit ${buildResult.code ?? "unknown"}).`,
             buildResult.stderr.trim() ? buildResult.stderr.trim() : null,
           ]
             .filter(Boolean)
@@ -99,16 +105,14 @@ export async function maybeRepairUiProtocolFreshness(
 
       if (gitLog && gitLog.code === 0 && gitLog.stdout.trim()) {
         note(
-          `UI assets are older than the protocol schema.\nFunctional changes since last build:\n${gitLog.stdout
-            .trim()
-            .split("\n")
-            .map((l) => `- ${l}`)
-            .join("\n")}`,
-          "UI Freshness",
+          IS_XCLAW_MODE 
+            ? `Файлы UI старше, чем схема протокола.\nИзменения с последней сборки:\n${gitLog.stdout.trim().split("\n").map((l) => `- ${l}`).join("\n")}`
+            : `UI assets are older than the protocol schema.\nFunctional changes since last build:\n${gitLog.stdout.trim().split("\n").map((l) => `- ${l}`).join("\n")}`,
+          IS_XCLAW_MODE ? "Актуальность UI" : "UI Freshness",
         );
 
         const shouldRepair = await prompter.confirmAggressive({
-          message: "Rebuild UI now? (Detected protocol mismatch requiring update)",
+          message: IS_XCLAW_MODE ? "Пересобрать UI сейчас? (Обнаружено несовпадение протоколов)" : "Rebuild UI now? (Detected protocol mismatch requiring update)",
           initialValue: true,
         });
 
@@ -116,13 +120,11 @@ export async function maybeRepairUiProtocolFreshness(
           const uiSourcesPath = path.join(root, "ui/package.json");
           const uiSourcesExist = await fs.stat(uiSourcesPath).catch(() => null);
           if (!uiSourcesExist) {
-            note("Skipping UI rebuild: ui/ sources not present.", "UI");
+            note(IS_XCLAW_MODE ? "Пропуск пересборки UI: исходники ui/ не найдены." : "Skipping UI rebuild: ui/ sources not present.", "UI");
             return;
           }
 
-          note("Rebuilding stale UI assets... (this may take a moment)", "UI");
-          // Use scripts/ui.js to build, assuming node is available as we are running in it.
-          // We use the same node executable to run the script.
+          note(IS_XCLAW_MODE ? "Пересборка устаревших файлов UI... (это может занять время)" : "Rebuilding stale UI assets... (this may take a moment)", "UI");
           const uiScriptPath = path.join(root, "scripts/ui.js");
           const buildResult = await runCommandWithTimeout(
             [process.execPath, uiScriptPath, "build"],
@@ -133,10 +135,10 @@ export async function maybeRepairUiProtocolFreshness(
             },
           );
           if (buildResult.code === 0) {
-            note("UI rebuild complete.", "UI");
+            note(IS_XCLAW_MODE ? "Пересборка UI завершена." : "UI rebuild complete.", "UI");
           } else {
             const details = [
-              `UI rebuild failed (exit ${buildResult.code ?? "unknown"}).`,
+              IS_XCLAW_MODE ? `Ошибка пересборки UI (exit ${buildResult.code ?? "неизвестно"}).` : `UI rebuild failed (exit ${buildResult.code ?? "unknown"}).`,
               buildResult.stderr.trim() ? buildResult.stderr.trim() : null,
             ]
               .filter(Boolean)

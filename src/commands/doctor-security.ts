@@ -1,3 +1,4 @@
+import { IS_XCLAW_MODE, isXClawMode } from "../xclaw/mode.js";
 import { listChannelPlugins } from "../channels/plugins/index.js";
 import type { ChannelId } from "../channels/plugins/types.js";
 import { formatCliCommand } from "../cli/command-format.js";
@@ -10,13 +11,21 @@ import { resolveDefaultChannelAccountContext } from "./channel-account-context.j
 
 export async function noteSecurityWarnings(cfg: OpenClawConfig) {
   const warnings: string[] = [];
-  const auditHint = `- Run: ${formatCliCommand("openclaw security audit --deep")}`;
+  const auditHint = IS_XCLAW_MODE 
+    ? `- Выполните: ${formatCliCommand("xclaw security audit --deep")}`
+    : `- Run: ${formatCliCommand("openclaw security audit --deep")}`;
 
   if (cfg.approvals?.exec?.enabled === false) {
     warnings.push(
-      "- Note: approvals.exec.enabled=false disables approval forwarding only.",
-      "  Host exec gating still comes from ~/.openclaw/exec-approvals.json.",
-      `  Check local policy with: ${formatCliCommand("openclaw approvals get --gateway")}`,
+      IS_XCLAW_MODE
+        ? "- Заметка: approvals.exec.enabled=false отключает только пересылку одобрений."
+        : "- Note: approvals.exec.enabled=false disables approval forwarding only.",
+      IS_XCLAW_MODE
+        ? "  Ограничение выполнения shell-команд все еще берется из ~/.xclaw/exec-approvals.json."
+        : "  Host exec gating still comes from ~/.openclaw/exec-approvals.json.",
+      IS_XCLAW_MODE
+        ? `  Проверьте политику командой: ${formatCliCommand("xclaw approvals get --gateway")}`
+        : `  Check local policy with: ${formatCliCommand("openclaw approvals get --gateway")}`,
     );
   }
 
@@ -50,38 +59,51 @@ export async function noteSecurityWarnings(cfg: OpenClawConfig) {
     (resolvedAuth.mode === "token" && hasToken) ||
     (resolvedAuth.mode === "password" && hasPassword);
   const bindDescriptor = `"${gatewayBind}" (${resolvedBindHost})`;
-  const saferRemoteAccessLines = [
-    "  Safer remote access: keep bind loopback and use Tailscale Serve/Funnel or an SSH tunnel.",
-    "  Example tunnel: ssh -N -L 18789:127.0.0.1:18789 user@gateway-host",
-    "  Docs: https://docs.openclaw.ai/gateway/remote",
-  ];
+  const saferRemoteAccessLines = IS_XCLAW_MODE
+    ? [
+        "  Безопасный удаленный доступ: оставьте привязку loopback и используйте Tailscale или SSH туннель.",
+        "  Пример туннеля: ssh -N -L 18789:127.0.0.1:18789 user@gateway-host",
+      ]
+    : [
+        "  Safer remote access: keep bind loopback and use Tailscale Serve/Funnel or an SSH tunnel.",
+        "  Example tunnel: ssh -N -L 18789:127.0.0.1:18789 user@gateway-host",
+        "  Docs: https://docs.openclaw.ai/gateway/remote",
+      ];
 
   if (isExposed) {
     if (!hasSharedSecret) {
       const authFixLines =
         resolvedAuth.mode === "password"
           ? [
-              `  Fix: ${formatCliCommand("openclaw configure")} to set a password`,
-              `  Or switch to token: ${formatCliCommand("openclaw config set gateway.auth.mode token")}`,
+              `  Исправьте: запустите ${formatCliCommand(IS_XCLAW_MODE ? "xclaw configure" : "openclaw configure")} для установки пароля`,
+              `  Или переключитесь на токен: ${formatCliCommand(IS_XCLAW_MODE ? "xclaw config set gateway.auth.mode token" : "openclaw config set gateway.auth.mode token")}`,
             ]
           : [
-              `  Fix: ${formatCliCommand("openclaw doctor --fix")} to generate a token`,
-              `  Or set token directly: ${formatCliCommand(
-                "openclaw config set gateway.auth.mode token",
+              `  Исправьте: запустите ${formatCliCommand(IS_XCLAW_MODE ? "xclaw doctor --fix" : "openclaw doctor --fix")} для генерации токена`,
+              `  Или установите напрямую: ${formatCliCommand(
+                IS_XCLAW_MODE ? "xclaw config set gateway.auth.mode token" : "openclaw config set gateway.auth.mode token",
               )}`,
             ];
       warnings.push(
-        `- CRITICAL: Gateway bound to ${bindDescriptor} without authentication.`,
-        `  Anyone on your network (or internet if port-forwarded) can fully control your agent.`,
-        `  Fix: ${formatCliCommand("openclaw config set gateway.bind loopback")}`,
+        IS_XCLAW_MODE 
+          ? `- КРИТИЧЕСКИ: Шлюз привязан к ${bindDescriptor} без аутентификации.`
+          : `- CRITICAL: Gateway bound to ${bindDescriptor} without authentication.`,
+        IS_XCLAW_MODE
+          ? `  Любой пользователь в вашей сети (или интернете при пробросе порта) может полностью управлять вашим агентом.`
+          : `  Anyone on your network (or internet if port-forwarded) can fully control your agent.`,
+        `  Исправьте: ${formatCliCommand(IS_XCLAW_MODE ? "xclaw config set gateway.bind loopback" : "openclaw config set gateway.bind loopback")}`,
         ...saferRemoteAccessLines,
         ...authFixLines,
       );
     } else {
       // Auth is configured, but still warn about network exposure
       warnings.push(
-        `- WARNING: Gateway bound to ${bindDescriptor} (network-accessible).`,
-        `  Ensure your auth credentials are strong and not exposed.`,
+        IS_XCLAW_MODE
+          ? `- ВНИМАНИЕ: Шлюз привязан к ${bindDescriptor} (доступен по сети).`
+          : `- WARNING: Gateway bound to ${bindDescriptor} (network-accessible).`,
+        IS_XCLAW_MODE
+          ? `  Убедитесь, что ваши учетные данные сильные и не скомпрометированы.`
+          : `  Ensure your auth credentials are strong and not exposed.`,
         ...saferRemoteAccessLines,
       );
     }
@@ -110,31 +132,45 @@ export async function noteSecurityWarnings(cfg: OpenClawConfig) {
 
     if (dmPolicy === "open") {
       const allowFromPath = `${params.allowFromPath}allowFrom`;
-      warnings.push(`- ${params.label} DMs: OPEN (${policyPath}="open"). Anyone can DM it.`);
+      warnings.push(
+        IS_XCLAW_MODE
+          ? `- ${params.label} ЛС: ОТКРЫТО (${policyPath}="open"). Любой может писать боту.`
+          : `- ${params.label} DMs: OPEN (${policyPath}="open"). Anyone can DM it.`,
+      );
       if (!hasWildcard) {
         warnings.push(
-          `- ${params.label} DMs: config invalid — "open" requires ${allowFromPath} to include "*".`,
+          IS_XCLAW_MODE
+            ? `- ${params.label} ЛС: конфиг невалиден — "open" требует наличия "*" в ${allowFromPath}.`
+            : `- ${params.label} DMs: config invalid — "open" requires ${allowFromPath} to include "*".`,
         );
       }
     }
 
     if (dmPolicy === "disabled") {
-      warnings.push(`- ${params.label} DMs: disabled (${policyPath}="disabled").`);
+      warnings.push(
+        IS_XCLAW_MODE
+          ? `- ${params.label} ЛС: отключено (${policyPath}="disabled").`
+          : `- ${params.label} DMs: disabled (${policyPath}="disabled").`,
+      );
       return;
     }
 
     if (dmPolicy !== "open" && allowCount === 0) {
       warnings.push(
-        `- ${params.label} DMs: locked (${policyPath}="${dmPolicy}") with no allowlist; unknown senders will be blocked / get a pairing code.`,
+        IS_XCLAW_MODE
+          ? `- ${params.label} ЛС: заблокировано (${policyPath}="${dmPolicy}") без белого списка; неизвестные отправители будут блокироваться или получать код сопряжения.`
+          : `- ${params.label} DMs: locked (${policyPath}="${dmPolicy}") with no allowlist; unknown senders will be blocked / get a pairing code.`,
       );
       warnings.push(`  ${params.approveHint}`);
     }
 
     if (dmScope === "main" && isMultiUserDm) {
       warnings.push(
-        `- ${params.label} DMs: multiple senders share the main session; run: ` +
-          formatCliCommand('openclaw config set session.dmScope "per-channel-peer"') +
-          ' (or "per-account-channel-peer" for multi-account channels) to isolate sessions.',
+        IS_XCLAW_MODE
+          ? `- ${params.label} ЛС: несколько отправителей делят одну сессию; выполните: ${formatCliCommand('xclaw config set session.dmScope "per-channel-peer"')} для изоляции.`
+          : `- ${params.label} DMs: multiple senders share the main session; run: ` +
+            formatCliCommand('openclaw config set session.dmScope "per-channel-peer"') +
+            ' (or "per-account-channel-peer" for multi-account channels) to isolate sessions.',
       );
     }
   };
@@ -181,7 +217,9 @@ export async function noteSecurityWarnings(cfg: OpenClawConfig) {
     }
   }
 
-  const lines = warnings.length > 0 ? warnings : ["- No channel security warnings detected."];
+  const lines = warnings.length > 0 
+    ? warnings 
+    : [IS_XCLAW_MODE ? "- Проблем с безопасностью каналов не обнаружено." : "- No channel security warnings detected."];
   lines.push(auditHint);
-  note(lines.join("\n"), "Security");
+  note(lines.join("\n"), IS_XCLAW_MODE ? "Безопасность" : "Security");
 }

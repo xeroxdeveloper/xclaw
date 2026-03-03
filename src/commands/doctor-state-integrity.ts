@@ -1,3 +1,4 @@
+import { isXClawMode } from "../xclaw/mode.js";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -492,15 +493,23 @@ export async function noteStateIntegrity(
   const requireOAuthDir = shouldRequireOAuthDir(cfg, env);
   const cloudSyncedStateDir = detectMacCloudSyncedStateDir(stateDir);
   const linuxSdBackedStateDir = detectLinuxSdBackedStateDir(stateDir);
+  const cmd = IS_XCLAW_MODE ? "xclaw" : "openclaw";
 
   if (cloudSyncedStateDir) {
     warnings.push(
-      [
-        `- State directory is under macOS cloud-synced storage (${displayStateDir}; ${cloudSyncedStateDir.storage}).`,
-        "- This can cause slow I/O and sync/lock races for sessions and credentials.",
-        "- Prefer a local non-synced state dir (for example: ~/.openclaw).",
-        `  Set locally: OPENCLAW_STATE_DIR=~/.openclaw ${formatCliCommand("openclaw doctor")}`,
-      ].join("\n"),
+      IS_XCLAW_MODE
+        ? [
+            `- Директория состояния находится в облачном хранилище macOS (${displayStateDir}; ${cloudSyncedStateDir.storage}).`,
+            "- Это может привести к медленному вводу-выводу и конфликтам синхронизации сессий.",
+            "- Рекомендуется использовать локальную папку (например: ~/.xclaw).",
+            `  Установите локально: XCLAW_STATE_DIR=~/.xclaw ${cmd} doctor`,
+          ].join("\n")
+        : [
+            `- State directory is under macOS cloud-synced storage (${displayStateDir}; ${cloudSyncedStateDir.storage}).`,
+            "- This can cause slow I/O and sync/lock races for sessions and credentials.",
+            "- Prefer a local non-synced state dir (for example: ~/.openclaw).",
+            `  Set locally: OPENCLAW_STATE_DIR=~/.openclaw ${formatCliCommand("openclaw doctor")}`,
+          ].join("\n"),
     );
   }
   if (linuxSdBackedStateDir) {
@@ -510,36 +519,40 @@ export async function noteStateIntegrity(
   let stateDirExists = existsDir(stateDir);
   if (!stateDirExists) {
     warnings.push(
-      `- CRITICAL: state directory missing (${displayStateDir}). Sessions, credentials, logs, and config are stored there.`,
+      IS_XCLAW_MODE 
+        ? `- КРИТИЧНО: отсутствует директория состояния (${displayStateDir}). Там хранятся сессии, ключи и логи.`
+        : `- CRITICAL: state directory missing (${displayStateDir}). Sessions, credentials, logs, and config are stored there.`,
     );
     if (cfg.gateway?.mode === "remote") {
       warnings.push(
-        "- Gateway is in remote mode; run doctor on the remote host where the gateway runs.",
+        IS_XCLAW_MODE 
+          ? "- Шлюз в удаленном режиме; запустите doctor на сервере, где работает шлюз."
+          : "- Gateway is in remote mode; run doctor on the remote host where the gateway runs.",
       );
     }
     const create = await prompter.confirmSkipInNonInteractive({
-      message: `Create ${displayStateDir} now?`,
+      message: IS_XCLAW_MODE ? `Создать ${displayStateDir} сейчас?` : `Create ${displayStateDir} now?`,
       initialValue: false,
     });
     if (create) {
       const created = ensureDir(stateDir);
       if (created.ok) {
-        changes.push(`- Created ${displayStateDir}`);
+        changes.push(IS_XCLAW_MODE ? `- Создано: ${displayStateDir}` : `- Created ${displayStateDir}`);
         stateDirExists = true;
       } else {
-        warnings.push(`- Failed to create ${displayStateDir}: ${created.error}`);
+        warnings.push(IS_XCLAW_MODE ? `- Ошибка создания ${displayStateDir}: ${created.error}` : `- Failed to create ${displayStateDir}: ${created.error}`);
       }
     }
   }
 
   if (stateDirExists && !canWriteDir(stateDir)) {
-    warnings.push(`- State directory not writable (${displayStateDir}).`);
+    warnings.push(IS_XCLAW_MODE ? `- Директория состояния недоступна для записи (${displayStateDir}).` : `- State directory not writable (${displayStateDir}).`);
     const hint = dirPermissionHint(stateDir);
     if (hint) {
       warnings.push(`  ${hint}`);
     }
     const repair = await prompter.confirmSkipInNonInteractive({
-      message: `Repair permissions on ${displayStateDir}?`,
+      message: IS_XCLAW_MODE ? `Исправить права доступа для ${displayStateDir}?` : `Repair permissions on ${displayStateDir}?`,
       initialValue: true,
     });
     if (repair) {
@@ -547,9 +560,9 @@ export async function noteStateIntegrity(
         const stat = fs.statSync(stateDir);
         const target = addUserRwx(stat.mode);
         fs.chmodSync(stateDir, target);
-        changes.push(`- Repaired permissions on ${displayStateDir}`);
+        changes.push(IS_XCLAW_MODE ? `- Исправлены права для ${displayStateDir}` : `- Repaired permissions on ${displayStateDir}`);
       } catch (err) {
-        warnings.push(`- Failed to repair ${displayStateDir}: ${String(err)}`);
+        warnings.push(IS_XCLAW_MODE ? `- Ошибка исправления прав ${displayStateDir}: ${String(err)}` : `- Failed to repair ${displayStateDir}: ${String(err)}`);
       }
     }
   }
@@ -565,15 +578,17 @@ export async function noteStateIntegrity(
       const isImmutableStore = resolvedDir.startsWith("/nix/store/");
       if (!isImmutableStore && (stat.mode & 0o077) !== 0) {
         warnings.push(
-          `- State directory permissions are too open (${displayStateDir}). Recommend chmod 700.`,
+          IS_XCLAW_MODE 
+            ? `- Права доступа к директории слишком открыты (${displayStateDir}). Рекомендуется chmod 700.`
+            : `- State directory permissions are too open (${displayStateDir}). Recommend chmod 700.`,
         );
         const tighten = await prompter.confirmSkipInNonInteractive({
-          message: `Tighten permissions on ${displayStateDir} to 700?`,
+          message: IS_XCLAW_MODE ? `Ограничить права доступа для ${displayStateDir} до 700?` : `Tighten permissions on ${displayStateDir} to 700?`,
           initialValue: true,
         });
         if (tighten) {
           fs.chmodSync(stateDir, 0o700);
-          changes.push(`- Tightened permissions on ${displayStateDir} to 700`);
+          changes.push(IS_XCLAW_MODE ? `- Права доступа ограничены до 700 для ${displayStateDir}` : `- Tightened permissions on ${displayStateDir} to 700`);
         }
       }
     } catch (err) {
@@ -592,15 +607,17 @@ export async function noteStateIntegrity(
       const isImmutableConfig = resolvedConfig.startsWith("/nix/store/");
       if (!isImmutableConfig && (stat.mode & 0o077) !== 0) {
         warnings.push(
-          `- Config file is group/world readable (${displayConfigPath ?? configPath}). Recommend chmod 600.`,
+          IS_XCLAW_MODE 
+            ? `- Конфиг доступен всем (${displayConfigPath ?? configPath}). Рекомендуется chmod 600.`
+            : `- Config file is group/world readable (${displayConfigPath ?? configPath}). Recommend chmod 600.`,
         );
         const tighten = await prompter.confirmSkipInNonInteractive({
-          message: `Tighten permissions on ${displayConfigPath ?? configPath} to 600?`,
+          message: IS_XCLAW_MODE ? `Ограничить права доступа для ${displayConfigPath ?? configPath} до 600?` : `Tighten permissions on ${displayConfigPath ?? configPath} to 600?`,
           initialValue: true,
         });
         if (tighten) {
           fs.chmodSync(configPath, 0o600);
-          changes.push(`- Tightened permissions on ${displayConfigPath ?? configPath} to 600`);
+          changes.push(IS_XCLAW_MODE ? `- Права доступа ограничены до 600 для ${displayConfigPath ?? configPath}` : `- Tightened permissions on ${displayConfigPath ?? configPath} to 600`);
         }
       }
     } catch (err) {
@@ -637,29 +654,29 @@ export async function noteStateIntegrity(
     for (const [dir, label] of dirCandidates) {
       const displayDir = displayDirFor(dir);
       if (!existsDir(dir)) {
-        warnings.push(`- CRITICAL: ${label} missing (${displayDir}).`);
+        warnings.push(IS_XCLAW_MODE ? `- КРИТИЧНО: отсутствует ${label} (${displayDir}).` : `- CRITICAL: ${label} missing (${displayDir}).`);
         const create = await prompter.confirmSkipInNonInteractive({
-          message: `Create ${label} at ${displayDir}?`,
+          message: IS_XCLAW_MODE ? `Создать ${label} в ${displayDir}?` : `Create ${label} at ${displayDir}?`,
           initialValue: true,
         });
         if (create) {
           const created = ensureDir(dir);
           if (created.ok) {
-            changes.push(`- Created ${label}: ${displayDir}`);
+            changes.push(IS_XCLAW_MODE ? `- Создано ${label}: ${displayDir}` : `- Created ${label}: ${displayDir}`);
           } else {
-            warnings.push(`- Failed to create ${displayDir}: ${created.error}`);
+            warnings.push(IS_XCLAW_MODE ? `- Ошибка создания ${displayDir}: ${created.error}` : `- Failed to create ${displayDir}: ${created.error}`);
           }
         }
         continue;
       }
       if (!canWriteDir(dir)) {
-        warnings.push(`- ${label} not writable (${displayDir}).`);
+        warnings.push(IS_XCLAW_MODE ? `- ${label} недоступен для записи (${displayDir}).` : `- ${label} not writable (${displayDir}).`);
         const hint = dirPermissionHint(dir);
         if (hint) {
           warnings.push(`  ${hint}`);
         }
         const repair = await prompter.confirmSkipInNonInteractive({
-          message: `Repair permissions on ${label}?`,
+          message: IS_XCLAW_MODE ? `Исправить права доступа для ${label}?` : `Repair permissions on ${label}?`,
           initialValue: true,
         });
         if (repair) {
@@ -667,9 +684,9 @@ export async function noteStateIntegrity(
             const stat = fs.statSync(dir);
             const target = addUserRwx(stat.mode);
             fs.chmodSync(dir, target);
-            changes.push(`- Repaired permissions on ${label}: ${displayDir}`);
+            changes.push(IS_XCLAW_MODE ? `- Исправлены права для ${label}: ${displayDir}` : `- Repaired permissions on ${label}: ${displayDir}`);
           } catch (err) {
-            warnings.push(`- Failed to repair ${displayDir}: ${String(err)}`);
+            warnings.push(IS_XCLAW_MODE ? `- Ошибка исправления прав ${displayDir}: ${String(err)}` : `- Failed to repair ${displayDir}: ${String(err)}`);
           }
         }
       }
@@ -687,11 +704,17 @@ export async function noteStateIntegrity(
   }
   if (extraStateDirs.size > 0) {
     warnings.push(
-      [
-        "- Multiple state directories detected. This can split session history.",
-        ...Array.from(extraStateDirs).map((dir) => `  - ${shortenHomePath(dir)}`),
-        `  Active state dir: ${displayStateDir}`,
-      ].join("\n"),
+      IS_XCLAW_MODE
+        ? [
+            "- Обнаружено несколько директорий состояния. Это может привести к разделению истории сессий.",
+            ...Array.from(extraStateDirs).map((dir) => `  - ${shortenHomePath(dir)}`),
+            `  Активная директория: ${displayStateDir}`,
+          ].join("\n")
+        : [
+            "- Multiple state directories detected. This can split session history.",
+            ...Array.from(extraStateDirs).map((dir) => `  - ${shortenHomePath(dir)}`),
+            `  Active state dir: ${displayStateDir}`,
+          ].join("\n"),
     );
   }
 
@@ -718,12 +741,19 @@ export async function noteStateIntegrity(
     });
     if (missing.length > 0) {
       warnings.push(
-        [
-          `- ${missing.length}/${recentTranscriptCandidates.length} recent sessions are missing transcripts.`,
-          `  Verify sessions in store: ${formatCliCommand(`openclaw sessions --store "${absoluteStorePath}"`)}`,
-          `  Preview cleanup impact: ${formatCliCommand(`openclaw sessions cleanup --store "${absoluteStorePath}" --dry-run`)}`,
-          `  Prune missing entries: ${formatCliCommand(`openclaw sessions cleanup --store "${absoluteStorePath}" --enforce --fix-missing`)}`,
-        ].join("\n"),
+        IS_XCLAW_MODE 
+          ? [
+              `- У ${missing.length}/${recentTranscriptCandidates.length} последних сессий отсутствуют логи (transcripts).`,
+              `  Проверьте сессии: ${formatCliCommand(`xclaw sessions --store "${absoluteStorePath}"`)}`,
+              `  Предпросмотр очистки: ${formatCliCommand(`xclaw sessions cleanup --store "${absoluteStorePath}" --dry-run`)}`,
+              `  Удалить битые записи: ${formatCliCommand(`xclaw sessions cleanup --store "${absoluteStorePath}" --enforce --fix-missing`)}`,
+            ].join("\n")
+          : [
+              `- ${missing.length}/${recentTranscriptCandidates.length} recent sessions are missing transcripts.`,
+              `  Verify sessions in store: ${formatCliCommand(`openclaw sessions --store "${absoluteStorePath}"`)}`,
+              `  Preview cleanup impact: ${formatCliCommand(`openclaw sessions cleanup --store "${absoluteStorePath}" --dry-run`)}`,
+              `  Prune missing entries: ${formatCliCommand(`openclaw sessions cleanup --store "${absoluteStorePath}" --enforce --fix-missing`)}`,
+            ].join("\n"),
       );
     }
 
@@ -737,13 +767,17 @@ export async function noteStateIntegrity(
       );
       if (!existsFile(transcriptPath)) {
         warnings.push(
-          `- Main session transcript missing (${shortenHomePath(transcriptPath)}). History will appear to reset.`,
+          IS_XCLAW_MODE 
+            ? `- Отсутствует лог основной сессии (${shortenHomePath(transcriptPath)}). История будет сброшена.`
+            : `- Main session transcript missing (${shortenHomePath(transcriptPath)}). History will appear to reset.`,
         );
       } else {
         const lineCount = countJsonlLines(transcriptPath);
         if (lineCount <= 1) {
           warnings.push(
-            `- Main session transcript has only ${lineCount} line. Session history may not be appending.`,
+            IS_XCLAW_MODE 
+              ? `- В логе основной сессии всего ${lineCount} строка. История сессии может не сохраняться.`
+              : `- Main session transcript has only ${lineCount} line. Session history may not be appending.`,
           );
         }
       }
@@ -771,10 +805,14 @@ export async function noteStateIntegrity(
       .filter((filePath) => !referencedTranscriptPaths.has(filePath));
     if (orphanTranscriptPaths.length > 0) {
       warnings.push(
-        `- Found ${orphanTranscriptPaths.length} orphan transcript file(s) in ${displaySessionsDir}. They are not referenced by sessions.json and can consume disk over time.`,
+        IS_XCLAW_MODE 
+          ? `- Найдено ${orphanTranscriptPaths.length} потерянных логов (orphan transcripts) в ${displaySessionsDir}. Они не привязаны к sessions.json и занимают место.`
+          : `- Found ${orphanTranscriptPaths.length} orphan transcript file(s) in ${displaySessionsDir}. They are not referenced by sessions.json and can consume disk over time.`,
       );
       const archiveOrphans = await prompter.confirmSkipInNonInteractive({
-        message: `Archive ${orphanTranscriptPaths.length} orphan transcript file(s) in ${displaySessionsDir}?`,
+        message: IS_XCLAW_MODE 
+          ? `Архивировать ${orphanTranscriptPaths.length} потерянных логов в ${displaySessionsDir}?`
+          : `Archive ${orphanTranscriptPaths.length} orphan transcript file(s) in ${displaySessionsDir}?`,
         initialValue: false,
       });
       if (archiveOrphans) {
@@ -787,22 +825,24 @@ export async function noteStateIntegrity(
             archived += 1;
           } catch (err) {
             warnings.push(
-              `- Failed to archive orphan transcript ${shortenHomePath(orphanPath)}: ${String(err)}`,
+              IS_XCLAW_MODE 
+                ? `- Ошибка архивации лога ${shortenHomePath(orphanPath)}: ${String(err)}`
+                : `- Failed to archive orphan transcript ${shortenHomePath(orphanPath)}: ${String(err)}`,
             );
           }
         }
         if (archived > 0) {
-          changes.push(`- Archived ${archived} orphan transcript file(s) in ${displaySessionsDir}`);
+          changes.push(IS_XCLAW_MODE ? `- Архивировано ${archived} потерянных логов в ${displaySessionsDir}` : `- Archived ${archived} orphan transcript file(s) in ${displaySessionsDir}`);
         }
       }
     }
   }
 
   if (warnings.length > 0) {
-    note(warnings.join("\n"), "State integrity");
+    note(warnings.join("\n"), IS_XCLAW_MODE ? "Целостность состояния" : "State integrity");
   }
   if (changes.length > 0) {
-    note(changes.join("\n"), "Doctor changes");
+    note(changes.join("\n"), IS_XCLAW_MODE ? "Изменения доктора" : "Doctor changes");
   }
 }
 
@@ -815,11 +855,16 @@ export function noteWorkspaceBackupTip(workspaceDir: string) {
     return;
   }
   note(
-    [
-      "- Tip: back up the workspace in a private git repo (GitHub or GitLab).",
-      "- Keep ~/.openclaw out of git; it contains credentials and session history.",
-      "- Details: /concepts/agent-workspace#git-backup-recommended",
-    ].join("\n"),
-    "Workspace",
+    IS_XCLAW_MODE 
+      ? [
+          "- Совет: сделайте бэкап рабочей области в приватном git-репозитории (GitHub или GitLab).",
+          "- Не добавляйте ~/.xclaw в git; там хранятся ключи и история сессий.",
+        ].join("\n")
+      : [
+          "- Tip: back up the workspace in a private git repo (GitHub or GitLab).",
+          "- Keep ~/.openclaw out of git; it contains credentials and session history.",
+          "- Details: /concepts/agent-workspace#git-backup-recommended",
+        ].join("\n"),
+    IS_XCLAW_MODE ? "Рабочая область" : "Workspace",
   );
 }

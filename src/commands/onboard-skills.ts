@@ -64,19 +64,18 @@ export async function setupSkills(
   );
   const blocked = report.skills.filter((s) => s.blockedByAllowlist);
 
-  const IS_XCLAW = IS_XCLAW_MODE;
   await prompter.note(
     [
-      `${IS_XCLAW ? "Доступно" : "Eligible"}: ${eligible.length}`,
-      `${IS_XCLAW ? "Не хватает данных" : "Missing requirements"}: ${missing.length}`,
-      `${IS_XCLAW ? "Не поддерживается этой ОС" : "Unsupported on this OS"}: ${unsupportedOs.length}`,
-      `${IS_XCLAW ? "Заблокировано списком" : "Blocked by allowlist"}: ${blocked.length}`,
+      `${IS_XCLAW_MODE ? "Доступно" : "Eligible"}: ${eligible.length}`,
+      `${IS_XCLAW_MODE ? "Не хватает данных" : "Missing requirements"}: ${missing.length}`,
+      `${IS_XCLAW_MODE ? "Не поддерживается этой ОС" : "Unsupported on this OS"}: ${unsupportedOs.length}`,
+      `${IS_XCLAW_MODE ? "Заблокировано списком" : "Blocked by allowlist"}: ${blocked.length}`,
     ].join("\n"),
-    IS_XCLAW ? "Статус навыков" : "Skills status",
+    IS_XCLAW_MODE ? "Статус навыков" : "Skills status",
   );
 
   const shouldConfigure = await prompter.confirm({
-    message: IS_XCLAW ? "Настроить навыки сейчас? (рекомендуется)" : "Configure skills now? (recommended)",
+    message: IS_XCLAW_MODE ? "Настроить навыки сейчас? (рекомендуется)" : "Configure skills now? (recommended)",
     initialValue: true,
   });
   if (!shouldConfigure) {
@@ -89,12 +88,12 @@ export async function setupSkills(
   let next: OpenClawConfig = cfg;
   if (installable.length > 0) {
     const toInstall = await prompter.multiselect({
-      message: IS_XCLAW ? "Установить недостающие зависимости" : "Install missing skill dependencies",
+      message: IS_XCLAW_MODE ? "Установить недостающие зависимости" : "Install missing skill dependencies",
       options: [
         {
           value: "__skip__",
-          label: IS_XCLAW ? "Пропустить" : "Skip for now",
-          hint: IS_XCLAW ? "Продолжить без установки зависимостей" : "Continue without installing dependencies",
+          label: IS_XCLAW_MODE ? "Пропустить" : "Skip for now",
+          hint: IS_XCLAW_MODE ? "Продолжить без установки зависимостей" : "Continue without installing dependencies",
         },
         ...installable.map((skill) => ({
           value: skill.name,
@@ -117,7 +116,7 @@ export async function setupSkills(
 
     if (needsBrewPrompt) {
       await prompter.note(
-        IS_XCLAW
+        IS_XCLAW_MODE
           ? [
               "Многие зависимости навыков распространяются через Homebrew.",
               "Без brew вам придется собирать их из исходников или скачивать вручную.",
@@ -126,19 +125,19 @@ export async function setupSkills(
               "Many skill dependencies are shipped via Homebrew.",
               "Without brew, you'll need to build from source or download releases manually.",
             ].join("\n"),
-        IS_XCLAW ? "Рекомендуется Homebrew" : "Homebrew recommended",
+        IS_XCLAW_MODE ? "Рекомендуется Homebrew" : "Homebrew recommended",
       );
       const showBrewInstall = await prompter.confirm({
-        message: IS_XCLAW ? "Показать команду установки Homebrew?" : "Show Homebrew install command?",
+        message: IS_XCLAW_MODE ? "Показать команду установки Homebrew?" : "Show Homebrew install command?",
         initialValue: true,
       });
       if (showBrewInstall) {
         await prompter.note(
           [
-            IS_XCLAW ? "Выполните:" : "Run:",
+            IS_XCLAW_MODE ? "Выполните:" : "Run:",
             '/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"',
           ].join("\n"),
-          IS_XCLAW ? "Установка Homebrew" : "Homebrew install",
+          IS_XCLAW_MODE ? "Установка Homebrew" : "Homebrew install",
         );
       }
     }
@@ -148,7 +147,7 @@ export async function setupSkills(
     );
     if (needsNodeManagerPrompt) {
       const nodeManager = (await prompter.select({
-        message: IS_XCLAW ? "Предпочтительный менеджер пакетов для навыков" : "Preferred node manager for skill installs",
+        message: IS_XCLAW_MODE ? "Предпочтительный менеджер пакетов для навыков" : "Preferred node manager for skill installs",
         options: resolveNodeManagerOptions(),
       })) as "npm" | "pnpm" | "bun";
       next = {
@@ -172,7 +171,7 @@ export async function setupSkills(
       if (!installId) {
         continue;
       }
-      const spin = prompter.progress(IS_XCLAW ? `Установка ${name}…` : `Installing ${name}…`);
+      const spin = prompter.progress(IS_XCLAW_MODE ? `Установка ${name}…` : `Installing ${name}…`);
       const result = await installSkill({
         workspaceDir,
         skillName: target.name,
@@ -182,8 +181,8 @@ export async function setupSkills(
       const warnings = result.warnings ?? [];
       if (result.ok) {
         spin.stop(warnings.length > 0 
-          ? (IS_XCLAW ? `Установлено ${name} (с предупреждениями)` : `Installed ${name} (with warnings)`) 
-          : (IS_XCLAW ? `Установлено ${name}` : `Installed ${name}`));
+          ? (IS_XCLAW_MODE ? `Установлено ${name} (с предупреждениями)` : `Installed ${name} (with warnings)`) 
+          : (IS_XCLAW_MODE ? `Установлено ${name}` : `Installed ${name}`));
         for (const warning of warnings) {
           runtime.log(warning);
         }
@@ -191,7 +190,7 @@ export async function setupSkills(
       }
       const code = result.code == null ? "" : ` (exit ${result.code})`;
       const detail = summarizeInstallFailure(result.message);
-      spin.stop(IS_XCLAW 
+      spin.stop(IS_XCLAW_MODE 
         ? `Ошибка установки: ${name}${code}${detail ? ` — ${detail}` : ""}` 
         : `Install failed: ${name}${code}${detail ? ` — ${detail}` : ""}`);
       for (const warning of warnings) {
@@ -203,7 +202,7 @@ export async function setupSkills(
         runtime.log(result.stdout.trim());
       }
       runtime.log(
-        IS_XCLAW 
+        IS_XCLAW_MODE 
           ? `Совет: запустите \`${formatCliCommand("xclaw doctor")}\` для проверки навыков.` 
           : `Tip: run \`${formatCliCommand("openclaw doctor")}\` to review skills + requirements.`,
       );
@@ -216,7 +215,7 @@ export async function setupSkills(
       continue;
     }
     const wantsKey = await prompter.confirm({
-      message: IS_XCLAW ? `Установить ${skill.primaryEnv} для ${skill.name}?` : `Set ${skill.primaryEnv} for ${skill.name}?`,
+      message: IS_XCLAW_MODE ? `Установить ${skill.primaryEnv} для ${skill.name}?` : `Set ${skill.primaryEnv} for ${skill.name}?`,
       initialValue: false,
     });
     if (!wantsKey) {
@@ -224,8 +223,8 @@ export async function setupSkills(
     }
     const apiKey = String(
       await prompter.text({
-        message: IS_XCLAW ? `Введите ${skill.primaryEnv}` : `Enter ${skill.primaryEnv}`,
-        validate: (value) => (value?.trim() ? undefined : (IS_XCLAW ? "Обязательно" : "Required")),
+        message: IS_XCLAW_MODE ? `Введите ${skill.primaryEnv}` : `Enter ${skill.primaryEnv}`,
+        validate: (value) => (value?.trim() ? undefined : (IS_XCLAW_MODE ? "Обязательно" : "Required")),
       }),
     );
     next = upsertSkillEntry(next, skill.skillKey, { apiKey: normalizeSecretInput(apiKey) });

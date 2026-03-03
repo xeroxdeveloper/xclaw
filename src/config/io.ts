@@ -152,8 +152,7 @@ function formatConfigValidationFailure(pathLabel: string, issueMessage: string):
   const match = issueMessage.match(OPEN_DM_POLICY_ALLOW_FROM_RE);
   const policyPath = match?.groups?.policyPath?.trim();
   const allowPath = match?.groups?.allowPath?.trim();
-  const IS_XCLAW = IS_XCLAW_MODE;
-  const cmd = IS_XCLAW ? "xlaw" : "openclaw";
+  const cmd = IS_XCLAW_MODE ? "xlaw" : "openclaw";
 
   if (!policyPath || !allowPath) {
     return `Config validation failed: ${pathLabel}: ${issueMessage}`;

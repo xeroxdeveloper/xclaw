@@ -17,10 +17,9 @@ export async function onboardCommand(opts: OnboardOptions, runtime: RuntimeEnv =
   assertSupportedRuntime(runtime);
   const originalAuthChoice = opts.authChoice;
   const normalizedAuthChoice = normalizeLegacyOnboardAuthChoice(originalAuthChoice);
-  const IS_XCLAW = IS_XCLAW_MODE;
   if (opts.nonInteractive && isDeprecatedAuthChoice(originalAuthChoice)) {
     runtime.error(
-      IS_XCLAW
+      IS_XCLAW_MODE
         ? [
             `Метод аутентификации "${String(originalAuthChoice)}" устарел.`,
             'Используйте "--auth-choice gemini-api-key" или "--auth-choice openai-api-key".',
@@ -49,20 +48,20 @@ export async function onboardCommand(opts: OnboardOptions, runtime: RuntimeEnv =
     normalizedOpts.secretInputMode !== "plaintext" &&
     normalizedOpts.secretInputMode !== "ref"
   ) {
-    runtime.error(IS_XCLAW ? 'Неверный --secret-input-mode. Используйте "plaintext" или "ref".' : 'Invalid --secret-input-mode. Use "plaintext" or "ref".');
+    runtime.error(IS_XCLAW_MODE ? 'Неверный --secret-input-mode. Используйте "plaintext" или "ref".' : 'Invalid --secret-input-mode. Use "plaintext" or "ref".');
     runtime.exit(1);
     return;
   }
 
   if (normalizedOpts.resetScope && !VALID_RESET_SCOPES.has(normalizedOpts.resetScope)) {
-    runtime.error(IS_XCLAW ? 'Неверный --reset-scope. Используйте "config", "config+creds+sessions", или "full".' : 'Invalid --reset-scope. Use "config", "config+creds+sessions", or "full".');
+    runtime.error(IS_XCLAW_MODE ? 'Неверный --reset-scope. Используйте "config", "config+creds+sessions", или "full".' : 'Invalid --reset-scope. Use "config", "config+creds+sessions", or "full".');
     runtime.exit(1);
     return;
   }
 
   if (normalizedOpts.nonInteractive && normalizedOpts.acceptRisk !== true) {
     runtime.error(
-      IS_XCLAW
+      IS_XCLAW_MODE
         ? [
             "Неинтерактивная настройка требует явного подтверждения рисков.",
             "Документация: https://docs.openclaw.ai/security",
@@ -89,7 +88,7 @@ export async function onboardCommand(opts: OnboardOptions, runtime: RuntimeEnv =
 
   if (process.platform === "win32") {
     runtime.log(
-      IS_XCLAW
+      IS_XCLAW_MODE
         ? [
             "Обнаружена Windows — XClaw отлично работает на WSL2!",
             "Обычная Windows может быть капризной.",

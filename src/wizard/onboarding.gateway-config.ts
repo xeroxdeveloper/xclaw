@@ -59,16 +59,15 @@ export async function configureGatewayForOnboarding(
   const { flow, localPort, quickstartGateway, prompter } = opts;
   let { nextConfig } = opts;
 
-  const IS_XCLAW = IS_XCLAW_MODE;
   const port =
     flow === "quickstart"
       ? quickstartGateway.port
       : Number.parseInt(
           String(
             await prompter.text({
-              message: IS_XCLAW ? "Порт шлюза" : "Gateway port",
+              message: IS_XCLAW_MODE ? "Порт шлюза" : "Gateway port",
               initialValue: String(localPort),
-              validate: (value) => (Number.isFinite(Number(value)) ? undefined : IS_XCLAW ? "Некорректный порт" : "Invalid port"),
+              validate: (value) => (Number.isFinite(Number(value)) ? undefined : IS_XCLAW_MODE ? "Некорректный порт" : "Invalid port"),
             }),
           ),
           10,
@@ -78,13 +77,13 @@ export async function configureGatewayForOnboarding(
     flow === "quickstart"
       ? quickstartGateway.bind
       : await prompter.select<GatewayWizardSettings["bind"]>({
-          message: IS_XCLAW ? "Привязка шлюза (bind)" : "Gateway bind",
+          message: IS_XCLAW_MODE ? "Привязка шлюза (bind)" : "Gateway bind",
           options: [
-            { value: "loopback", label: IS_XCLAW ? "Локально (127.0.0.1)" : "Loopback (127.0.0.1)" },
-            { value: "lan", label: IS_XCLAW ? "Локальная сеть (0.0.0.0)" : "LAN (0.0.0.0)" },
+            { value: "loopback", label: IS_XCLAW_MODE ? "Локально (127.0.0.1)" : "Loopback (127.0.0.1)" },
+            { value: "lan", label: IS_XCLAW_MODE ? "Локальная сеть (0.0.0.0)" : "LAN (0.0.0.0)" },
             { value: "tailnet", label: "Tailnet (Tailscale IP)" },
-            { value: "auto", label: IS_XCLAW ? "Авто" : "Auto (Loopback → LAN)" },
-            { value: "custom", label: IS_XCLAW ? "Свой IP" : "Custom IP" },
+            { value: "auto", label: IS_XCLAW_MODE ? "Авто" : "Auto (Loopback → LAN)" },
+            { value: "custom", label: IS_XCLAW_MODE ? "Свой IP" : "Custom IP" },
           ],
         });
 
@@ -93,7 +92,7 @@ export async function configureGatewayForOnboarding(
     const needsPrompt = flow !== "quickstart" || !customBindHost;
     if (needsPrompt) {
       const input = await prompter.text({
-        message: IS_XCLAW ? "Свой IP адрес" : "Custom IP address",
+        message: IS_XCLAW_MODE ? "Свой IP адрес" : "Custom IP address",
         placeholder: "192.168.1.100",
         initialValue: customBindHost ?? "",
         validate: validateIPv4AddressInput,
@@ -106,14 +105,14 @@ export async function configureGatewayForOnboarding(
     flow === "quickstart"
       ? quickstartGateway.authMode
       : ((await prompter.select({
-          message: IS_XCLAW ? "Аутентификация шлюза" : "Gateway auth",
+          message: IS_XCLAW_MODE ? "Аутентификация шлюза" : "Gateway auth",
           options: [
             {
               value: "token",
-              label: IS_XCLAW ? "Токен" : "Token",
-              hint: IS_XCLAW ? "Рекомендуется (локально + удаленно)" : "Recommended default (local + remote)",
+              label: IS_XCLAW_MODE ? "Токен" : "Token",
+              hint: IS_XCLAW_MODE ? "Рекомендуется (локально + удаленно)" : "Recommended default (local + remote)",
             },
-            { value: "password", label: IS_XCLAW ? "Пароль" : "Password" },
+            { value: "password", label: IS_XCLAW_MODE ? "Пароль" : "Password" },
           ],
           initialValue: "token",
         })) as GatewayAuthChoice);
@@ -122,7 +121,7 @@ export async function configureGatewayForOnboarding(
     flow === "quickstart"
       ? quickstartGateway.tailscaleMode
       : await prompter.select<GatewayWizardSettings["tailscaleMode"]>({
-          message: IS_XCLAW ? "Доступ через Tailscale" : "Tailscale exposure",
+          message: IS_XCLAW_MODE ? "Доступ через Tailscale" : "Tailscale exposure",
           options: [...TAILSCALE_EXPOSURE_OPTIONS],
         });
 
@@ -141,7 +140,7 @@ export async function configureGatewayForOnboarding(
     await prompter.note(TAILSCALE_DOCS_LINES.join("\n"), "Tailscale");
     tailscaleResetOnExit = Boolean(
       await prompter.confirm({
-        message: IS_XCLAW ? "Сбросить Tailscale при выходе?" : "Reset Tailscale serve/funnel on exit?",
+        message: IS_XCLAW_MODE ? "Сбросить Tailscale при выходе?" : "Reset Tailscale serve/funnel on exit?",
         initialValue: false,
       }),
     );
@@ -152,10 +151,10 @@ export async function configureGatewayForOnboarding(
   // - Funnel requires password auth.
   if (tailscaleMode !== "off" && bind !== "loopback") {
     await prompter.note(
-      IS_XCLAW
+      IS_XCLAW_MODE
         ? "Tailscale требует привязку к loopback. Изменение привязки на loopback."
         : "Tailscale requires bind=loopback. Adjusting bind to loopback.",
-      IS_XCLAW ? "Заметка" : "Note",
+      IS_XCLAW_MODE ? "Заметка" : "Note",
     );
     bind = "loopback";
     customBindHost = undefined;
@@ -163,8 +162,8 @@ export async function configureGatewayForOnboarding(
 
   if (tailscaleMode === "funnel" && authMode !== "password") {
     await prompter.note(
-      IS_XCLAW ? "Tailscale funnel требует аутентификацию по паролю." : "Tailscale funnel requires password auth.",
-      IS_XCLAW ? "Заметка" : "Note",
+      IS_XCLAW_MODE ? "Tailscale funnel требует аутентификацию по паролю." : "Tailscale funnel requires password auth.",
+      IS_XCLAW_MODE ? "Заметка" : "Note",
     );
     authMode = "password";
   }
@@ -178,8 +177,8 @@ export async function configureGatewayForOnboarding(
         randomToken();
     } else {
       const tokenInput = await prompter.text({
-        message: IS_XCLAW ? "Токен шлюза (пусто для автогенерации)" : "Gateway token (blank to generate)",
-        placeholder: IS_XCLAW ? "Нужен для удаленного доступа" : "Needed for multi-machine or non-loopback access",
+        message: IS_XCLAW_MODE ? "Токен шлюза (пусто для автогенерации)" : "Gateway token (blank to generate)",
+        placeholder: IS_XCLAW_MODE ? "Нужен для удаленного доступа" : "Needed for multi-machine or non-loopback access",
         initialValue:
           quickstartGateway.token ??
           normalizeGatewayTokenInput(process.env.OPENCLAW_GATEWAY_TOKEN) ??
@@ -194,7 +193,7 @@ export async function configureGatewayForOnboarding(
       flow === "quickstart" && quickstartGateway.password
         ? quickstartGateway.password
         : await prompter.text({
-            message: IS_XCLAW ? "Пароль шлюза" : "Gateway password",
+            message: IS_XCLAW_MODE ? "Пароль шлюза" : "Gateway password",
             validate: validateGatewayPasswordInput,
           });
     nextConfig = {

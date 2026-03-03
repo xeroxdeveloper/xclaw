@@ -16,9 +16,8 @@ export function isSystemdUnavailableDetail(detail?: string): boolean {
 }
 
 export function renderSystemdUnavailableHints(options: { wsl?: boolean } = {}): string[] {
-  const IS_XCLAW = IS_XCLAW_MODE;
   if (options.wsl) {
-    return IS_XCLAW
+    return IS_XCLAW_MODE
       ? [
           "В WSL2 должен быть включен systemd: добавьте [boot]\\nsystemd=true в /etc/wsl.conf",
           "Затем выполните: wsl --shutdown (в PowerShell) и перезапустите дистрибутив.",
@@ -30,7 +29,7 @@ export function renderSystemdUnavailableHints(options: { wsl?: boolean } = {}): 
           "Verify: systemctl --user status",
         ];
   }
-  return IS_XCLAW
+  return IS_XCLAW_MODE
     ? [
         "Пользовательские службы systemd недоступны; установите/включите systemd или запустите шлюз через ваш менеджер процессов.",
         `Если вы в контейнере, запустите шлюз в интерактивном режиме вместо \`${formatCliCommand("xclaw gateway")}\`.`,

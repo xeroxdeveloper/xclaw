@@ -39,8 +39,7 @@ if (
 ) {
   // Imported as a dependency
 } else {
-  const IS_XCLAW = IS_XCLAW_MODE;
-  const CLI_TITLE = IS_XCLAW ? "xclaw" : "openclaw";
+  const CLI_TITLE = IS_XCLAW_MODE ? "xclaw" : "openclaw";
   process.title = CLI_TITLE;
   
   if (process.env.TELEGRAM_BOT_TOKEN) {

@@ -237,21 +237,20 @@ export async function promptDefaultModel(
     a.localeCompare(b),
   );
 
-  const IS_XCLAW = IS_XCLAW_MODE;
   const hasPreferredProvider = preferredProvider ? providers.includes(preferredProvider) : false;
   const shouldPromptProvider =
     !hasPreferredProvider && providers.length > 1 && models.length > PROVIDER_FILTER_THRESHOLD;
   if (shouldPromptProvider) {
     const selection = await params.prompter.select({
-      message: IS_XCLAW ? "Фильтр моделей по провайдеру" : "Filter models by provider",
+      message: IS_XCLAW_MODE ? "Фильтр моделей по провайдеру" : "Filter models by provider",
       options: [
-        { value: "*", label: IS_XCLAW ? "Все провайдеры" : "All providers" },
+        { value: "*", label: IS_XCLAW_MODE ? "Все провайдеры" : "All providers" },
         ...providers.map((provider) => {
           const count = models.filter((entry) => entry.provider === provider).length;
           return {
             value: provider,
             label: provider,
-            hint: IS_XCLAW
+            hint: IS_XCLAW_MODE
               ? `${count} модел${count === 1 ? "ь" : count < 5 ? "и" : "ей"}`
               : `${count} model${count === 1 ? "" : "s"}`,
           };
@@ -286,15 +285,15 @@ export async function promptDefaultModel(
     options.push({
       value: KEEP_VALUE,
       label: configuredRaw
-        ? IS_XCLAW
+        ? IS_XCLAW_MODE
           ? `Оставить текущую (${configuredRaw})`
           : `Keep current (${configuredRaw})`
-        : IS_XCLAW
+        : IS_XCLAW_MODE
           ? `Оставить текущую (по умолчанию: ${resolvedKey})`
           : `Keep current (default: ${resolvedKey})`,
       hint:
         configuredRaw && configuredRaw !== resolvedKey
-          ? IS_XCLAW
+          ? IS_XCLAW_MODE
             ? `будет ${resolvedKey}`
             : `resolves to ${resolvedKey}`
           : undefined,
@@ -303,7 +302,7 @@ export async function promptDefaultModel(
   if (includeManual) {
     options.push({
       value: MANUAL_VALUE,
-      label: IS_XCLAW ? "Ввести модель вручную" : "Enter model manually",
+      label: IS_XCLAW_MODE ? "Ввести модель вручную" : "Enter model manually",
     });
   }
   if (includeVllm && agentDir) {

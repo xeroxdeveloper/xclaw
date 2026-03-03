@@ -26,8 +26,7 @@ export async function noteMacLaunchAgentOverrides() {
   }
 
   const displayMarkerPath = shortenHomePath(markerPath);
-  const IS_XCLAW = IS_XCLAW_MODE;
-  const lines = IS_XCLAW
+  const lines = IS_XCLAW_MODE
     ? [
         `- Запись LaunchAgent отключена через ${displayMarkerPath}.`,
         "- Чтобы восстановить стандартное поведение:",
@@ -38,7 +37,7 @@ export async function noteMacLaunchAgentOverrides() {
         "- To restore default behavior:",
         `  rm ${displayMarkerPath}`,
       ];
-  note(lines.join("\n"), IS_XCLAW ? "Шлюз (macOS)" : "Gateway (macOS)");
+  note(lines.join("\n"), IS_XCLAW_MODE ? "Шлюз (macOS)" : "Gateway (macOS)");
 }
 
 async function launchctlGetenv(name: string): Promise<string | undefined> {
@@ -84,9 +83,8 @@ export async function noteMacLaunchctlGatewayEnvOverrides(
     ["CLAWDBOT_GATEWAY_TOKEN", await getenv("CLAWDBOT_GATEWAY_TOKEN")],
     ["CLAWDBOT_GATEWAY_PASSWORD", await getenv("CLAWDBOT_GATEWAY_PASSWORD")],
   ].filter((entry): entry is [string, string] => Boolean(entry[1]?.trim()));
-  const IS_XCLAW = IS_XCLAW_MODE;
   if (deprecatedLaunchctlEntries.length > 0) {
-    const lines = IS_XCLAW
+    const lines = IS_XCLAW_MODE
       ? [
           "- Обнаружены устаревшие переменные окружения launchctl (игнорируются).",
           ...deprecatedLaunchctlEntries.map(
@@ -101,7 +99,7 @@ export async function noteMacLaunchctlGatewayEnvOverrides(
               `- \`${key}\` is set; use \`OPENCLAW_${key.slice(key.indexOf("_") + 1)}\` instead.`,
           ),
         ];
-    (deps?.noteFn ?? note)(lines.join("\n"), IS_XCLAW ? "Шлюз (macOS)" : "Gateway (macOS)");
+    (deps?.noteFn ?? note)(lines.join("\n"), IS_XCLAW_MODE ? "Шлюз (macOS)" : "Gateway (macOS)");
   }
 
   const tokenEntries = [
@@ -120,7 +118,7 @@ export async function noteMacLaunchctlGatewayEnvOverrides(
     return;
   }
 
-  const lines = IS_XCLAW
+  const lines = IS_XCLAW_MODE
     ? [
         "- обнаружены переопределения окружения launchctl (это может вызвать ошибки авторизации).",
         envToken && envTokenKey
@@ -146,7 +144,7 @@ export async function noteMacLaunchctlGatewayEnvOverrides(
         envPasswordKey ? `  launchctl unsetenv ${envPasswordKey}` : undefined,
       ].filter((line): line is string => Boolean(line));
 
-  (deps?.noteFn ?? note)(lines.join("\n"), IS_XCLAW ? "Шлюз (macOS)" : "Gateway (macOS)");
+  (deps?.noteFn ?? note)(lines.join("\n"), IS_XCLAW_MODE ? "Шлюз (macOS)" : "Gateway (macOS)");
 }
 
 export function noteDeprecatedLegacyEnvVars(
@@ -160,8 +158,7 @@ export function noteDeprecatedLegacyEnvVars(
     return;
   }
 
-  const IS_XCLAW = IS_XCLAW_MODE;
-  const lines = IS_XCLAW
+  const lines = IS_XCLAW_MODE
     ? [
         "- Обнаружены устаревшие переменные окружения (игнорируются).",
         "- Используйте эквиваленты XCLAW_* или OPENCLAW_*:",
@@ -178,7 +175,7 @@ export function noteDeprecatedLegacyEnvVars(
           return `  ${key} -> OPENCLAW_${suffix}`;
         }),
       ];
-  (deps?.noteFn ?? note)(lines.join("\n"), IS_XCLAW ? "Окружение" : "Environment");
+  (deps?.noteFn ?? note)(lines.join("\n"), IS_XCLAW_MODE ? "Окружение" : "Environment");
 }
 
 function isTruthyEnvValue(value: string | undefined): boolean {
@@ -219,7 +216,6 @@ export function noteStartupOptimizationHints(
   }
 
   const noteFn = deps?.noteFn ?? note;
-  const IS_XCLAW = IS_XCLAW_MODE;
   const compileCache = env.NODE_COMPILE_CACHE?.trim() ?? "";
   const disableCompileCache = env.NODE_DISABLE_COMPILE_CACHE?.trim() ?? "";
   const noRespawn = env.OPENCLAW_NO_RESPAWN?.trim() ?? "";
@@ -227,25 +223,25 @@ export function noteStartupOptimizationHints(
 
   if (!compileCache) {
     lines.push(
-      IS_XCLAW
+      IS_XCLAW_MODE
         ? "- NODE_COMPILE_CACHE не установлен; повторные запуски CLI могут быть медленнее."
         : "- NODE_COMPILE_CACHE is not set; repeated CLI runs can be slower on small hosts (Pi/VM).",
     );
   } else if (isTmpCompileCachePath(compileCache)) {
     lines.push(
-      IS_XCLAW
+      IS_XCLAW_MODE
         ? "- NODE_COMPILE_CACHE указывает на /tmp; используйте /var/tmp, чтобы кэш сохранялся после перезагрузки."
         : "- NODE_COMPILE_CACHE points to /tmp; use /var/tmp so cache survives reboots and warms startup reliably.",
     );
   }
 
   if (isTruthyEnvValue(disableCompileCache)) {
-    lines.push(IS_XCLAW ? "- NODE_DISABLE_COMPILE_CACHE установлен; кэш компиляции отключен." : "- NODE_DISABLE_COMPILE_CACHE is set; startup compile cache is disabled.");
+    lines.push(IS_XCLAW_MODE ? "- NODE_DISABLE_COMPILE_CACHE установлен; кэш компиляции отключен." : "- NODE_DISABLE_COMPILE_CACHE is set; startup compile cache is disabled.");
   }
 
   if (noRespawn !== "1") {
     lines.push(
-      IS_XCLAW
+      IS_XCLAW_MODE
         ? "- OPENCLAW_NO_RESPAWN не установлен в 1; установите его, чтобы избежать лишних накладных расходов."
         : "- OPENCLAW_NO_RESPAWN is not set to 1; set it to avoid extra startup overhead from self-respawn.",
     );
@@ -255,7 +251,7 @@ export function noteStartupOptimizationHints(
     return;
   }
 
-  const suggestions = IS_XCLAW
+  const suggestions = IS_XCLAW_MODE
     ? [
         "- Рекомендуемое окружение:",
         "  export NODE_COMPILE_CACHE=/var/tmp/xclaw-compile-cache",
@@ -271,5 +267,5 @@ export function noteStartupOptimizationHints(
         isTruthyEnvValue(disableCompileCache) ? "  unset NODE_DISABLE_COMPILE_CACHE" : undefined,
       ].filter((line): line is string => Boolean(line));
 
-  noteFn([...lines, ...suggestions].join("\n"), IS_XCLAW ? "Оптимизация запуска" : "Startup optimization");
+  noteFn([...lines, ...suggestions].join("\n"), IS_XCLAW_MODE ? "Оптимизация запуска" : "Startup optimization");
 }

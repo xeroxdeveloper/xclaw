@@ -266,10 +266,9 @@ export const registerTelegramHandlers = ({
       if (entries.length === 1) {
         const replyMedia = await resolveReplyMediaForMessage(last.ctx, last.msg);
 
-        const IS_XCLAW = IS_XCLAW_MODE;
         const senderId = last.msg.from?.id ? String(last.msg.from.id) : "";
         const isOwner = isTelegramOwner(senderId, allowFrom);
-        const ownerOnly = IS_XCLAW && (process.env.XCLAW_OWNER_ONLY === "1" || cfg.xclaw?.ownerOnly);
+        const ownerOnly = IS_XCLAW_MODE && (process.env.XCLAW_OWNER_ONLY === "1" || cfg.xclaw?.ownerOnly);
 
         if (ownerOnly && !isOwner) {
           const ownerIds = Array.from(resolveTelegramOwnerIds());
@@ -314,10 +313,9 @@ export const registerTelegramHandlers = ({
       const syntheticCtx = buildSyntheticContext(baseCtx, syntheticMessage);
       const replyMedia = await resolveReplyMediaForMessage(baseCtx, syntheticMessage);
 
-      const IS_XCLAW = IS_XCLAW_MODE;
       const senderId = last.msg.from?.id ? String(last.msg.from.id) : "";
       const isOwner = isTelegramOwner(senderId, allowFrom);
-      const ownerOnly = IS_XCLAW && (process.env.XCLAW_OWNER_ONLY === "1" || cfg.xclaw?.ownerOnly);
+      const ownerOnly = IS_XCLAW_MODE && (process.env.XCLAW_OWNER_ONLY === "1" || cfg.xclaw?.ownerOnly);
 
       if (ownerOnly && !isOwner) {
         if (last.msg.chat.type === "private") {
@@ -1484,7 +1482,11 @@ export const registerTelegramHandlers = ({
 
       const groupWhitelist = cfg.xclaw?.groupWhitelist;
       if (event.isGroup && Array.isArray(groupWhitelist) && !groupWhitelist.includes(String(event.chatId))) {
-        logVerbose(`Blocked telegram group ${event.chatId} (not in whitelist)`);
+        if (IS_XCLAW_MODE) {
+          logVerbose(`[XClaw] Blocked group ${event.chatId} - not in whitelist: ${JSON.stringify(groupWhitelist)}`);
+        } else {
+          logVerbose(`Blocked telegram group ${event.chatId} (not in whitelist)`);
+        }
         return;
       }
 
@@ -1493,20 +1495,53 @@ export const registerTelegramHandlers = ({
         return;
       }
 
-      if (
-        shouldSkipGroupMessage({
-          isGroup: event.isGroup,
-          chatId: event.chatId,
-          chatTitle: event.msg.chat.title,
-          resolvedThreadId,
-          senderId: event.senderId,
-          senderUsername: event.senderUsername,
-          effectiveGroupAllow,
-          hasGroupAllowOverride,
-          groupConfig,
-          topicConfig,
-        })
-      ) {
+      const skipGroup = shouldSkipGroupMessage({
+        isGroup: event.isGroup,
+        chatId: event.chatId,
+        chatTitle: event.msg.chat.title,
+        resolvedThreadId,
+        senderId: event.senderId,
+        senderUsername: event.senderUsername,
+        effectiveGroupAllow,
+        hasGroupAllowOverride,
+        groupConfig,
+        topicConfig,
+      });
+
+      if (skipGroup) {
+        if (IS_XCLAW_MODE && event.isGroup) {
+          logVerbose(`[XClaw] Silently skipping group message in ${event.chatId} (policy/activation/mention check)`);
+        }
+        return;
+      }
+
+      const isOwner = isTelegramOwner(event.senderId, allowFrom);
+      const ownerOnly = IS_XCLAW_MODE && (process.env.XCLAW_OWNER_ONLY === "1" || cfg.xclaw?.ownerOnly);
+
+      if (IS_XCLAW_MODE) {
+        logVerbose(`[XClaw] Inbound message: senderId=${event.senderId}, isGroup=${event.isGroup}, isOwner=${isOwner}, ownerOnly=${ownerOnly}`);
+      }
+
+      if (ownerOnly && !isOwner) {
+        logVerbose(`[XClaw] Rejected non-owner message from ${event.senderId} (@${event.senderUsername})`);
+        if (!event.isGroup) {
+           const ownerIds = Array.from(resolveTelegramOwnerIds());
+           const primaryOwnerId = ownerIds[0] || (Array.isArray(allowFrom) ? String(allowFrom[0]) : "");
+           
+           if (primaryOwnerId) {
+              await withTelegramApiErrorLogging({
+                operation: "sendMessage",
+                runtime,
+                fn: () => bot.api.sendMessage(primaryOwnerId, `🔔 Попытка доступа: ${event.msg.from?.first_name} (@${event.msg.from?.username || "no_user"}) ID: ${event.senderId}`),
+              }).catch(() => {});
+           }
+
+           await withTelegramApiErrorLogging({
+             operation: "sendMessage",
+             runtime,
+             fn: () => bot.api.sendMessage(event.chatId, "Бот настроен только для ответов владельцу."),
+           });
+        }
         return;
       }
 
@@ -1522,6 +1557,7 @@ export const registerTelegramHandlers = ({
           logger,
         });
         if (!dmAuthorized) {
+          if (IS_XCLAW_MODE) logVerbose(`[XClaw] DM access denied (pairing/allowlist) for ${event.senderId}`);
           return;
         }
       }
@@ -1545,6 +1581,9 @@ export const registerTelegramHandlers = ({
     const msg = ctx.message;
     if (!msg) {
       return;
+    }
+    if (IS_XCLAW_MODE) {
+      logVerbose(`[XClaw] Raw message received in chat ${msg.chat.id} from ${msg.from?.id}`);
     }
     await handleInboundMessageLike({
       ctxForDedupe: ctx,

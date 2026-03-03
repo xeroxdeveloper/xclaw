@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { IS_XCLAW_MODE, isXClawMode } from "../xclaw/mode.js";
 import { resolveDefaultAgentId } from "../agents/agent-scope.js";
 import type { OpenClawConfig } from "../config/config.js";
 import {
@@ -355,7 +356,9 @@ function resolveSymlinkTarget(linkPath: string): string | null {
 }
 
 function formatStateDirMigration(legacyDir: string, targetDir: string): string {
-  return `State dir: ${legacyDir} → ${targetDir} (legacy path now symlinked)`;
+  return IS_XCLAW_MODE 
+    ? `Директория состояния: ${legacyDir} → ${targetDir} (устаревший путь теперь является симлинком)`
+    : `State dir: ${legacyDir} → ${targetDir} (legacy path now symlinked)`;
 }
 
 function isDirPath(filePath: string): boolean {
@@ -461,7 +464,7 @@ export async function autoMigrateLegacyStateDir(params: {
     return { migrated: false, skipped: false, changes, warnings };
   }
   if (!legacyStat.isDirectory() && !legacyStat.isSymbolicLink()) {
-    warnings.push(`Legacy state path is not a directory: ${legacyDir}`);
+    warnings.push(IS_XCLAW_MODE ? `Устаревший путь состояния не является директорией: ${legacyDir}` : `Legacy state path is not a directory: ${legacyDir}`);
     return { migrated: false, skipped: false, changes, warnings };
   }
 
@@ -470,7 +473,9 @@ export async function autoMigrateLegacyStateDir(params: {
     const legacyTarget = legacyDir ? resolveSymlinkTarget(legacyDir) : null;
     if (!legacyTarget) {
       warnings.push(
-        `Legacy state dir is a symlink (${legacyDir ?? "unknown"}); could not resolve target.`,
+        IS_XCLAW_MODE
+          ? `Устаревшая директория состояния является симлинком (${legacyDir ?? "неизвестно"}); не удалось разрешить цель.`
+          : `Legacy state dir is a symlink (${legacyDir ?? "unknown"}); could not resolve target.`,
       );
       return { migrated: false, skipped: false, changes, warnings };
     }
@@ -485,22 +490,24 @@ export async function autoMigrateLegacyStateDir(params: {
         legacyStat = null;
       }
       if (!legacyStat) {
-        warnings.push(`Legacy state dir missing after symlink resolution: ${legacyDir}`);
+        warnings.push(IS_XCLAW_MODE ? `Устаревшая директория состояния отсутствует после разрешения симлинка: ${legacyDir}` : `Legacy state dir missing after symlink resolution: ${legacyDir}`);
         return { migrated: false, skipped: false, changes, warnings };
       }
       if (!legacyStat.isDirectory() && !legacyStat.isSymbolicLink()) {
-        warnings.push(`Legacy state path is not a directory: ${legacyDir}`);
+        warnings.push(IS_XCLAW_MODE ? `Устаревший путь состояния не является директорией: ${legacyDir}` : `Legacy state path is not a directory: ${legacyDir}`);
         return { migrated: false, skipped: false, changes, warnings };
       }
       symlinkDepth += 1;
       if (symlinkDepth > 2) {
-        warnings.push(`Legacy state dir symlink chain too deep: ${legacyDir}`);
+        warnings.push(IS_XCLAW_MODE ? `Цепочка симлинков устаревшей директории слишком глубокая: ${legacyDir}` : `Legacy state dir symlink chain too deep: ${legacyDir}`);
         return { migrated: false, skipped: false, changes, warnings };
       }
       continue;
     }
     warnings.push(
-      `Legacy state dir is a symlink (${legacyDir ?? "unknown"} → ${legacyTarget}); skipping auto-migration.`,
+      IS_XCLAW_MODE
+        ? `Устаревшая директория состояния является симлинком (${legacyDir ?? "неизвестно"} → ${legacyTarget}); авто-миграция пропущена.`
+        : `Legacy state dir is a symlink (${legacyDir ?? "unknown"} → ${legacyTarget}); skipping auto-migration.`,
     );
     return { migrated: false, skipped: false, changes, warnings };
   }
@@ -510,26 +517,30 @@ export async function autoMigrateLegacyStateDir(params: {
       return { migrated: false, skipped: false, changes, warnings };
     }
     warnings.push(
-      `State dir migration skipped: target already exists (${targetDir}). Remove or merge manually.`,
+      IS_XCLAW_MODE
+        ? `Миграция директории состояния пропущена: цель уже существует (${targetDir}). Удалите или объедините вручную.`
+        : `State dir migration skipped: target already exists (${targetDir}). Remove or merge manually.`,
     );
     return { migrated: false, skipped: false, changes, warnings };
   }
 
   try {
     if (!legacyDir) {
-      throw new Error("Legacy state dir not found");
+      throw new Error(IS_XCLAW_MODE ? "Устаревшая директория состояния не найдена" : "Legacy state dir not found");
     }
     fs.renameSync(legacyDir, targetDir);
   } catch (err) {
     warnings.push(
-      `Failed to move legacy state dir (${legacyDir ?? "unknown"} → ${targetDir}): ${String(err)}`,
+      IS_XCLAW_MODE
+        ? `Не удалось переместить устаревшую директорию состояния (${legacyDir ?? "неизвестно"} → ${targetDir}): ${String(err)}`
+        : `Failed to move legacy state dir (${legacyDir ?? "unknown"} → ${targetDir}): ${String(err)}`,
     );
     return { migrated: false, skipped: false, changes, warnings };
   }
 
   try {
     if (!legacyDir) {
-      throw new Error("Legacy state dir not found");
+      throw new Error(IS_XCLAW_MODE ? "Устаревшая директория состояния не найдена" : "Legacy state dir not found");
     }
     fs.symlinkSync(targetDir, legacyDir, "dir");
     changes.push(formatStateDirMigration(legacyDir, targetDir));
@@ -537,7 +548,7 @@ export async function autoMigrateLegacyStateDir(params: {
     try {
       if (process.platform === "win32") {
         if (!legacyDir) {
-          throw new Error("Legacy state dir not found", { cause: err });
+          throw new Error(IS_XCLAW_MODE ? "Устаревшая директория состояния не найдена" : "Legacy state dir not found", { cause: err });
         }
         fs.symlinkSync(targetDir, legacyDir, "junction");
         changes.push(formatStateDirMigration(legacyDir, targetDir));
@@ -548,21 +559,27 @@ export async function autoMigrateLegacyStateDir(params: {
       try {
         if (!legacyDir) {
           // oxlint-disable-next-line preserve-caught-error
-          throw new Error("Legacy state dir not found", { cause: fallbackErr });
+          throw new Error(IS_XCLAW_MODE ? "Устаревшая директория состояния не найдена" : "Legacy state dir not found", { cause: fallbackErr });
         }
         fs.renameSync(targetDir, legacyDir);
         warnings.push(
-          `State dir migration rolled back (failed to link legacy path): ${String(fallbackErr)}`,
+          IS_XCLAW_MODE 
+            ? `Миграция директории состояния отменена (не удалось связать устаревший путь): ${String(fallbackErr)}`
+            : `State dir migration rolled back (failed to link legacy path): ${String(fallbackErr)}`,
         );
         return { migrated: false, skipped: false, changes: [], warnings };
       } catch (rollbackErr) {
         warnings.push(
-          `State dir moved but failed to link legacy path (${legacyDir ?? "unknown"} → ${targetDir}): ${String(fallbackErr)}`,
+          IS_XCLAW_MODE
+            ? `Директория состояния перемещена, но не удалось связать устаревший путь (${legacyDir ?? "неизвестно"} → ${targetDir}): ${String(fallbackErr)}`
+            : `State dir moved but failed to link legacy path (${legacyDir ?? "unknown"} → ${targetDir}): ${String(fallbackErr)}`,
         );
         warnings.push(
-          `Rollback failed; set OPENCLAW_STATE_DIR=${targetDir} to avoid split state: ${String(rollbackErr)}`,
+          IS_XCLAW_MODE
+            ? `Откат не удался; установите XCLAW_STATE_DIR=${targetDir} чтобы избежать разделения состояния: ${String(rollbackErr)}`
+            : `Rollback failed; set OPENCLAW_STATE_DIR=${targetDir} to avoid split state: ${String(rollbackErr)}`,
         );
-        changes.push(`State dir: ${legacyDir ?? "unknown"} → ${targetDir}`);
+        changes.push(IS_XCLAW_MODE ? `Директория состояния: ${legacyDir ?? "неизвестно"} → ${targetDir}` : `State dir: ${legacyDir ?? "unknown"} → ${targetDir}`);
       }
     }
   }
@@ -627,20 +644,22 @@ export async function detectLegacyStateMigrations(params: {
 
   const preview: string[] = [];
   if (hasLegacySessions) {
-    preview.push(`- Sessions: ${sessionsLegacyDir} → ${sessionsTargetDir}`);
+    preview.push(IS_XCLAW_MODE ? `- Сессии: ${sessionsLegacyDir} → ${sessionsTargetDir}` : `- Sessions: ${sessionsLegacyDir} → ${sessionsTargetDir}`);
   }
   if (legacyKeys.length > 0) {
-    preview.push(`- Sessions: canonicalize legacy keys in ${sessionsTargetStorePath}`);
+    preview.push(IS_XCLAW_MODE ? `- Сессии: канонизация ключей в ${sessionsTargetStorePath}` : `- Sessions: canonicalize legacy keys in ${sessionsTargetStorePath}`);
   }
   if (hasLegacyAgentDir) {
-    preview.push(`- Agent dir: ${legacyAgentDir} → ${targetAgentDir}`);
+    preview.push(IS_XCLAW_MODE ? `- Директория агента: ${legacyAgentDir} → ${targetAgentDir}` : `- Agent dir: ${legacyAgentDir} → ${targetAgentDir}`);
   }
   if (hasLegacyWhatsAppAuth) {
-    preview.push(`- WhatsApp auth: ${oauthDir} → ${targetWhatsAppAuthDir} (keep oauth.json)`);
+    preview.push(IS_XCLAW_MODE ? `- Авторизация WhatsApp: ${oauthDir} → ${targetWhatsAppAuthDir} (сохранить oauth.json)` : `- WhatsApp auth: ${oauthDir} → ${targetWhatsAppAuthDir} (keep oauth.json)`);
   }
   if (hasLegacyTelegramAllowFrom) {
     preview.push(
-      `- Telegram pairing allowFrom: ${legacyTelegramAllowFromPath} → ${targetTelegramAllowFromPath}`,
+      IS_XCLAW_MODE
+        ? `- Белый список Telegram: ${legacyTelegramAllowFromPath} → ${targetTelegramAllowFromPath}`
+        : `- Telegram pairing allowFrom: ${legacyTelegramAllowFromPath} → ${targetTelegramAllowFromPath}`,
     );
   }
 
@@ -1006,11 +1025,13 @@ export async function autoMigrateLegacyState(params: {
 
   const logger = params.log ?? createSubsystemLogger("state-migrations");
   if (changes.length > 0) {
-    logger.info(`Auto-migrated legacy state:\n${changes.map((entry) => `- ${entry}`).join("\n")}`);
+    logger.info(IS_XCLAW_MODE ? `Авто-миграция устаревшего состояния:\n${changes.map((entry) => `- ${entry}`).join("\n")}` : `Auto-migrated legacy state:\n${changes.map((entry) => `- ${entry}`).join("\n")}`);
   }
   if (warnings.length > 0) {
     logger.warn(
-      `Legacy state migration warnings:\n${warnings.map((entry) => `- ${entry}`).join("\n")}`,
+      IS_XCLAW_MODE
+        ? `Предупреждения миграции устаревшего состояния:\n${warnings.map((entry) => `- ${entry}`).join("\n")}`
+        : `Legacy state migration warnings:\n${warnings.map((entry) => `- ${entry}`).join("\n")}`,
     );
   }
 

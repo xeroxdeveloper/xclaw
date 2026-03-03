@@ -13,14 +13,13 @@ export function formatRuntimeStatusWithDetails({
   state,
   details = [],
 }: RuntimeStatusFormatInput): string {
-  const IS_XCLAW = IS_XCLAW_MODE;
-  const runtimeStatus = status ?? (IS_XCLAW ? "неизвестно" : "unknown");
+  const runtimeStatus = status ?? (IS_XCLAW_MODE ? "неизвестно" : "unknown");
   const fullDetails: string[] = [];
   if (pid) {
     fullDetails.push(`pid ${pid}`);
   }
   if (state && state.toLowerCase() !== runtimeStatus) {
-    fullDetails.push(`${IS_XCLAW ? "статус" : "state"} ${state}`);
+    fullDetails.push(`${IS_XCLAW_MODE ? "статус" : "state"} ${state}`);
   }
   for (const detail of details) {
     if (detail) {

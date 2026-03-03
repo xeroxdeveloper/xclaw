@@ -47,30 +47,29 @@ const AUTH_CHOICE_HELP = formatAuthChoiceChoicesForCli({
 });
 
 export function registerOnboardCommand(program: Command) {
-  const IS_XCLAW = IS_XCLAW_MODE;
   const command = program
     .command("onboard")
     .description(t("onboard.description"))
     .addHelpText(
       "after",
       () =>
-        `\n${theme.muted(IS_XCLAW ? "Документация:" : "Docs:")} ${formatDocsLink("/cli/onboard", "docs.openclaw.ai/cli/onboard")}\n`,
+        `\n${theme.muted(IS_XCLAW_MODE ? "Документация:" : "Docs:")} ${formatDocsLink("/cli/onboard", "docs.openclaw.ai/cli/onboard")}\n`,
     )
-    .option("--workspace <dir>", IS_XCLAW ? "Рабочая директория агента (по умолчанию: ~/.xclaw/workspace)" : "Agent workspace directory (default: ~/.openclaw/workspace)")
+    .option("--workspace <dir>", IS_XCLAW_MODE ? "Рабочая директория агента (по умолчанию: ~/.xclaw/workspace)" : "Agent workspace directory (default: ~/.openclaw/workspace)")
     .option(
       "--reset",
-      IS_XCLAW ? "Сбросить конфиг + ключи + сессии перед запуском" : "Reset config + credentials + sessions before running wizard (workspace only with --reset-scope full)",
+      IS_XCLAW_MODE ? "Сбросить конфиг + ключи + сессии перед запуском" : "Reset config + credentials + sessions before running wizard (workspace only with --reset-scope full)",
     )
-    .option("--reset-scope <scope>", IS_XCLAW ? "Область сброса: config|config+creds+sessions|full" : "Reset scope: config|config+creds+sessions|full")
-    .option("--non-interactive", IS_XCLAW ? "Запуск без подсказок" : "Run without prompts", false)
+    .option("--reset-scope <scope>", IS_XCLAW_MODE ? "Область сброса: config|config+creds+sessions|full" : "Reset scope: config|config+creds+sessions|full")
+    .option("--non-interactive", IS_XCLAW_MODE ? "Запуск без подсказок" : "Run without prompts", false)
     .option(
       "--accept-risk",
-      IS_XCLAW ? "Подтверждение рисков доступа к системе" : "Acknowledge that agents are powerful and full system access is risky (required for --non-interactive)",
+      IS_XCLAW_MODE ? "Подтверждение рисков доступа к системе" : "Acknowledge that agents are powerful and full system access is risky (required for --non-interactive)",
       false,
     )
-    .option("--flow <flow>", IS_XCLAW ? "Поток настройки: quickstart|advanced|manual" : "Wizard flow: quickstart|advanced|manual")
-    .option("--mode <mode>", IS_XCLAW ? "Режим настройки: local|remote" : "Wizard mode: local|remote")
-    .option("--auth-choice <choice>", IS_XCLAW ? `Аутентификация: ${AUTH_CHOICE_HELP}` : `Auth: ${AUTH_CHOICE_HELP}`)
+    .option("--flow <flow>", IS_XCLAW_MODE ? "Поток настройки: quickstart|advanced|manual" : "Wizard flow: quickstart|advanced|manual")
+    .option("--mode <mode>", IS_XCLAW_MODE ? "Режим настройки: local|remote" : "Wizard mode: local|remote")
+    .option("--auth-choice <choice>", IS_XCLAW_MODE ? `Аутентификация: ${AUTH_CHOICE_HELP}` : `Auth: ${AUTH_CHOICE_HELP}`)
     .option(
       "--token-provider <id>",
       "Token provider id (non-interactive; used with --auth-choice token)",
@@ -93,30 +92,30 @@ export function registerOnboardCommand(program: Command) {
   }
 
   command
-    .option("--custom-api-key <key>", IS_XCLAW ? "Пользовательский API ключ (опционально)" : "Custom provider API key (optional)")
-    .option("--custom-base-url <url>", IS_XCLAW ? "Пользовательский базовый URL провайдера" : "Custom provider base URL")
-    .option("--custom-compatibility <mode>", IS_XCLAW ? "Совместимость API: openai|anthropic (по умолчанию: openai)" : "Custom provider API compatibility: openai|anthropic (default: openai)")
-    .option("--custom-model-id <id>", IS_XCLAW ? "Пользовательский ID модели" : "Custom provider model ID")
-    .option("--custom-provider-id <id>", IS_XCLAW ? "Пользовательский ID провайдера" : "Custom provider ID (optional; auto-derived by default)")
-    .option("--gateway-port <port>", IS_XCLAW ? "Порт шлюза" : "Gateway port")
-    .option("--gateway-bind <mode>", IS_XCLAW ? "Привязка шлюза: loopback|tailnet|lan|auto|custom" : "Gateway bind: loopback|tailnet|lan|auto|custom")
-    .option("--gateway-auth <mode>", IS_XCLAW ? "Аутентификация шлюза: token|password" : "Gateway auth: token|password")
-    .option("--gateway-token <token>", IS_XCLAW ? "Токен шлюза (token auth)" : "Gateway token (token auth)")
-    .option("--gateway-password <password>", IS_XCLAW ? "Пароль шлюза (password auth)" : "Gateway password (password auth)")
-    .option("--remote-url <url>", IS_XCLAW ? "URL удаленного шлюза (WebSocket)" : "Remote Gateway WebSocket URL")
-    .option("--remote-token <token>", IS_XCLAW ? "Токен удаленного шлюза" : "Remote Gateway token (optional)")
-    .option("--tailscale <mode>", IS_XCLAW ? "Tailscale: off|serve|funnel" : "Tailscale: off|serve|funnel")
-    .option("--tailscale-reset-on-exit", IS_XCLAW ? "Сброс Tailscale при выходе" : "Reset tailscale serve/funnel on exit")
-    .option("--install-daemon", IS_XCLAW ? "Установить службу шлюза" : "Install gateway service")
-    .option("--no-install-daemon", IS_XCLAW ? "Пропустить установку службы" : "Skip gateway service install")
-    .option("--skip-daemon", IS_XCLAW ? "Пропустить установку службы" : "Skip gateway service install")
-    .option("--daemon-runtime <runtime>", IS_XCLAW ? "Среда службы: node|bun" : "Daemon runtime: node|bun")
-    .option("--skip-channels", IS_XCLAW ? "Пропустить настройку каналов" : "Skip channel setup")
-    .option("--skip-skills", IS_XCLAW ? "Пропустить настройку навыков" : "Skip skills setup")
-    .option("--skip-health", IS_XCLAW ? "Пропустить проверку здоровья" : "Skip health check")
-    .option("--skip-ui", IS_XCLAW ? "Пропустить настройку UI" : "Skip Control UI/TUI prompts")
-    .option("--node-manager <name>", IS_XCLAW ? "Менеджер пакетов: npm|pnpm|bun" : "Node manager for skills: npm|pnpm|bun")
-    .option("--json", IS_XCLAW ? "Вывод в формате JSON" : "Output JSON summary", false);
+    .option("--custom-api-key <key>", IS_XCLAW_MODE ? "Пользовательский API ключ (опционально)" : "Custom provider API key (optional)")
+    .option("--custom-base-url <url>", IS_XCLAW_MODE ? "Пользовательский базовый URL провайдера" : "Custom provider base URL")
+    .option("--custom-compatibility <mode>", IS_XCLAW_MODE ? "Совместимость API: openai|anthropic (по умолчанию: openai)" : "Custom provider API compatibility: openai|anthropic (default: openai)")
+    .option("--custom-model-id <id>", IS_XCLAW_MODE ? "Пользовательский ID модели" : "Custom provider model ID")
+    .option("--custom-provider-id <id>", IS_XCLAW_MODE ? "Пользовательский ID провайдера" : "Custom provider ID (optional; auto-derived by default)")
+    .option("--gateway-port <port>", IS_XCLAW_MODE ? "Порт шлюза" : "Gateway port")
+    .option("--gateway-bind <mode>", IS_XCLAW_MODE ? "Привязка шлюза: loopback|tailnet|lan|auto|custom" : "Gateway bind: loopback|tailnet|lan|auto|custom")
+    .option("--gateway-auth <mode>", IS_XCLAW_MODE ? "Аутентификация шлюза: token|password" : "Gateway auth: token|password")
+    .option("--gateway-token <token>", IS_XCLAW_MODE ? "Токен шлюза (token auth)" : "Gateway token (token auth)")
+    .option("--gateway-password <password>", IS_XCLAW_MODE ? "Пароль шлюза (password auth)" : "Gateway password (password auth)")
+    .option("--remote-url <url>", IS_XCLAW_MODE ? "URL удаленного шлюза (WebSocket)" : "Remote Gateway WebSocket URL")
+    .option("--remote-token <token>", IS_XCLAW_MODE ? "Токен удаленного шлюза" : "Remote Gateway token (optional)")
+    .option("--tailscale <mode>", IS_XCLAW_MODE ? "Tailscale: off|serve|funnel" : "Tailscale: off|serve|funnel")
+    .option("--tailscale-reset-on-exit", IS_XCLAW_MODE ? "Сброс Tailscale при выходе" : "Reset tailscale serve/funnel on exit")
+    .option("--install-daemon", IS_XCLAW_MODE ? "Установить службу шлюза" : "Install gateway service")
+    .option("--no-install-daemon", IS_XCLAW_MODE ? "Пропустить установку службы" : "Skip gateway service install")
+    .option("--skip-daemon", IS_XCLAW_MODE ? "Пропустить установку службы" : "Skip gateway service install")
+    .option("--daemon-runtime <runtime>", IS_XCLAW_MODE ? "Среда службы: node|bun" : "Daemon runtime: node|bun")
+    .option("--skip-channels", IS_XCLAW_MODE ? "Пропустить настройку каналов" : "Skip channel setup")
+    .option("--skip-skills", IS_XCLAW_MODE ? "Пропустить настройку навыков" : "Skip skills setup")
+    .option("--skip-health", IS_XCLAW_MODE ? "Пропустить проверку здоровья" : "Skip health check")
+    .option("--skip-ui", IS_XCLAW_MODE ? "Пропустить настройку UI" : "Skip Control UI/TUI prompts")
+    .option("--node-manager <name>", IS_XCLAW_MODE ? "Менеджер пакетов: npm|pnpm|bun" : "Node manager for skills: npm|pnpm|bun")
+    .option("--json", IS_XCLAW_MODE ? "Вывод в формате JSON" : "Output JSON summary", false);
 
   command.action(async (opts, commandRuntime) => {
     await runCommandWithRuntime(defaultRuntime, async () => {

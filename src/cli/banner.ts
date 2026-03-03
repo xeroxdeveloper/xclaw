@@ -41,9 +41,8 @@ export function formatCliBannerLine(version: string, options: BannerOptions = {}
   const commitLabel = commit ?? "unknown";
   const tagline = pickTagline(options);
   const rich = options.richTty ?? isRich();
-  const IS_XCLAW = IS_XCLAW_MODE;
-  const title = IS_XCLAW ? "💎 XClaw" : "💎 OpenClaw";
-  const prefix = IS_XCLAW ? "💎 " : "💎 ";
+  const title = IS_XCLAW_MODE ? "💎 XClaw" : "💎 OpenClaw";
+  const prefix = IS_XCLAW_MODE ? "💎 " : "💎 ";
   const columns = options.columns ?? process.stdout.columns ?? 120;
   const plainFullLine = `${title} ${version} (${commitLabel}) — ${tagline}`;
   const fitsOnOneLine = visibleWidth(plainFullLine) <= columns;

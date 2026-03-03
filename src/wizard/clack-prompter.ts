@@ -23,8 +23,7 @@ import { WizardCancelledError } from "./prompts.js";
 
 function guardCancel<T>(value: T | symbol): T {
   if (isCancel(value)) {
-    const IS_XCLAW = IS_XCLAW_MODE;
-    cancel(stylePromptTitle(IS_XCLAW ? "Настройка отменена." : "Setup cancelled.") ?? (IS_XCLAW ? "Настройка отменена." : "Setup cancelled."));
+    cancel(stylePromptTitle(IS_XCLAW_MODE ? "Настройка отменена." : "Setup cancelled.") ?? (IS_XCLAW_MODE ? "Настройка отменена." : "Setup cancelled."));
     throw new WizardCancelledError();
   }
   return value;
@@ -113,13 +112,12 @@ export function createClackPrompter(): WizardPrompter {
       );
     },
     confirm: async (params) => {
-      const IS_XCLAW = IS_XCLAW_MODE;
       return guardCancel(
         await confirm({
           message: stylePromptMessage(params.message),
           initialValue: params.initialValue,
-          active: IS_XCLAW ? "Да" : "Yes",
-          inactive: IS_XCLAW ? "Нет" : "No",
+          active: IS_XCLAW_MODE ? "Да" : "Yes",
+          inactive: IS_XCLAW_MODE ? "Нет" : "No",
         }),
       );
     },

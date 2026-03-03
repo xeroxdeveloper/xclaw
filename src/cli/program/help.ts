@@ -45,34 +45,33 @@ const EXAMPLES = [
 ] as const;
 
 export function configureProgramHelp(program: Command, ctx: ProgramContext) {
-  const IS_XCLAW = IS_XCLAW_MODE;
   program
     .name(CLI_NAME)
     .description("")
     .version(ctx.programVersion)
     .option(
       "--dev",
-      IS_XCLAW
+      IS_XCLAW_MODE
         ? "Режим разработки: изолированное состояние в ~/.xclaw-dev, порт 19001."
         : "Dev profile: isolate state under ~/.openclaw-dev, default gateway port 19001, and shift derived ports (browser/canvas)",
     )
     .option(
       "--profile <name>",
-      IS_XCLAW
+      IS_XCLAW_MODE
         ? "Использовать именованный профиль (изолирует конфиг в ~/.xclaw-<имя>)"
         : "Use a named profile (isolates OPENCLAW_STATE_DIR/OPENCLAW_CONFIG_PATH under ~/.openclaw-<name>)",
     )
     .option(
       "--log-level <level>",
-      IS_XCLAW
+      IS_XCLAW_MODE
         ? `Переопределение уровня логирования (${CLI_LOG_LEVEL_VALUES})`
         : `Global log level override for file + console (${CLI_LOG_LEVEL_VALUES})`,
       parseCliLogLevelOption,
     );
 
-  program.option("--no-color", IS_XCLAW ? "Отключить цвета ANSI" : "Disable ANSI colors", false);
-  program.helpOption("-h, --help", IS_XCLAW ? "Показать справку" : "Display help for command");
-  program.helpCommand("help [command]", IS_XCLAW ? "Показать справку по команде" : "Display help for command");
+  program.option("--no-color", IS_XCLAW_MODE ? "Отключить цвета ANSI" : "Disable ANSI colors", false);
+  program.helpOption("-h, --help", IS_XCLAW_MODE ? "Показать справку" : "Display help for command");
+  program.helpCommand("help [command]", IS_XCLAW_MODE ? "Показать справку по команде" : "Display help for command");
 
   program.configureHelp({
     // sort options and subcommands alphabetically
