@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { IS_XCLAW_MODE, isXClawMode } from "./xclaw/mode.js";
+import { IS_XCLAW_MODE, isXClawMode, resolveOnlyChannelsFromEnv, resolveOnlyModelProvidersFromEnv, resolveTelegramNativeCommandAllowlist, resolveTelegramOwnerIds } from "./xclaw/mode.js";
 import { spawn } from "node:child_process";
 import { enableCompileCache } from "node:module";
 import process from "node:process";
@@ -38,7 +38,7 @@ if (
 ) {
   // Imported as a dependency
 } else {
-  const CLI_TITLE = isXClawMode() ? "xclaw" : "openclaw";
+  const CLI_TITLE = IS_XCLAW_MODE ? "xclaw" : "openclaw";
   process.title = CLI_TITLE;
   
   if (process.env.TELEGRAM_BOT_TOKEN) {

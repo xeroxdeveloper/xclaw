@@ -783,7 +783,7 @@ export const registerTelegramHandlers = ({
       const isOwnerCheck = isTelegramOwner(event.senderId, cfg);
 
       if (event.isGroup && !isWhitelisted) {
-        if (isXClawMode()) {
+        if (IS_XCLAW_MODE) {
           logVerbose(`[XClaw] Group ${event.chatId} is not in whitelist.`);
           
           if (isReplyToBot || isOwnerCheck) {
@@ -819,7 +819,7 @@ export const registerTelegramHandlers = ({
       });
       if (skipGroup) return;
 
-      const ownerOnly = isXClawMode() && (process.env.XCLAW_OWNER_ONLY === "1" || xclawCfg?.ownerOnly);
+      const ownerOnly = IS_XCLAW_MODE && (process.env.XCLAW_OWNER_ONLY === "1" || xclawCfg?.ownerOnly);
 
       if (ownerOnly && !isOwner) {
         if (!event.isGroup) {
@@ -867,7 +867,7 @@ export const registerTelegramHandlers = ({
   bot.on("message", async (ctx) => {
     const msg = ctx.message;
     if (!msg) return;
-    if (isXClawMode()) logVerbose(`[XClaw] Message from ${msg.from?.id} in ${msg.chat.id}`);
+    if (IS_XCLAW_MODE) logVerbose(`[XClaw] Message from ${msg.from?.id} in ${msg.chat.id}`);
     await handleInboundMessageLike({
       ctxForDedupe: ctx, ctx: buildSyntheticContext(ctx, msg), msg, chatId: msg.chat.id,
       isGroup: msg.chat.type.includes("group"), isForum: msg.chat.is_forum === true,
@@ -879,7 +879,7 @@ export const registerTelegramHandlers = ({
   bot.on("callback_query", async (ctx) => {
     const callback = ctx.callbackQuery;
     const data = callback.data || "";
-    if (isXClawMode() && data.startsWith("xclaw_")) {
+    if (IS_XCLAW_MODE && data.startsWith("xclaw_")) {
       const senderId = String(callback.from.id);
       if (!isTelegramAdmin(senderId, cfg)) {
         await bot.api.answerCallbackQuery(callback.id, { text: "Нет прав.", show_alert: true });

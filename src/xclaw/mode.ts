@@ -1,8 +1,5 @@
 /**
  * XClaw Mode Detection.
- * 
- * This module is designed to be the single source of truth for XClaw mode.
- * We use function calls to resolve values at runtime to avoid circular dependency / TDZ issues.
  */
 
 function getIsXClaw(env: NodeJS.ProcessEnv): boolean {
@@ -12,13 +9,16 @@ function getIsXClaw(env: NodeJS.ProcessEnv): boolean {
   return profile === "xclaw" || isTruthy(xclawMode);
 }
 
-/** Check XClaw mode for a specific environment. */
-export function isXClawMode(env: NodeJS.ProcessEnv = process.env): boolean {
-  return getIsXClaw(env);
-}
-
 /** Global flag for XClaw mode (shortcut for the current process). */
 export const IS_XCLAW_MODE = getIsXClaw(process.env);
+
+/** Check XClaw mode for a specific environment. */
+export function isXClawMode(env: NodeJS.ProcessEnv = process.env): boolean {
+  if (env === process.env) {
+    return IS_XCLAW_MODE;
+  }
+  return getIsXClaw(env);
+}
 
 function parseCsvSet(raw?: string): Set<string> {
   return new Set(
@@ -91,5 +91,6 @@ export function resolveTelegramNativeCommandAllowlist(
     "xupdate",
     "ghissue",
     "whois",
+    "rank",
   ]);
 }
