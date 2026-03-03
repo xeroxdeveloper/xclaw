@@ -146,13 +146,13 @@ function hashConfigRaw(raw: string | null): string {
     .digest("hex");
 }
 
-import { IS_XCLAW_MODE } from "../xclaw/mode.js";
+import { isXClawMode } from "../xclaw/mode.js";
 
 function formatConfigValidationFailure(pathLabel: string, issueMessage: string): string {
   const match = issueMessage.match(OPEN_DM_POLICY_ALLOW_FROM_RE);
   const policyPath = match?.groups?.policyPath?.trim();
   const allowPath = match?.groups?.allowPath?.trim();
-  const cmd = IS_XCLAW_MODE ? "xlaw" : "openclaw";
+  const cmd = isXClawMode() ? "xlaw" : "openclaw";
 
   if (!policyPath || !allowPath) {
     return `Config validation failed: ${pathLabel}: ${issueMessage}`;

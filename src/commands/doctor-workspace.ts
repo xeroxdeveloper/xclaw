@@ -1,4 +1,4 @@
-import { IS_XCLAW_MODE, isXClawMode } from "../xclaw/mode.js";
+import { isXClawMode } from "../xclaw/mode.js";
 import fs from "node:fs";
 import path from "node:path";
 import { DEFAULT_AGENTS_FILENAME } from "../agents/workspace.js";
@@ -57,7 +57,7 @@ export function detectLegacyWorkspaceDirs(params: {
 }
 
 export function formatLegacyWorkspaceWarning(detection: LegacyWorkspaceDetection): string {
-  return IS_XCLAW_MODE 
+  return isXClawMode() 
     ? [
         "Обнаружены лишние директории рабочей области (могут содержать старые файлы агентов):",
         ...detection.legacyDirs.map((dir) => `- ${shortenHomePath(dir)}`),

@@ -1,4 +1,4 @@
-import { IS_XCLAW_MODE } from "../xclaw/mode.js";
+import { isXClawMode } from "../xclaw/mode.js";
 
 type RuntimeStatusFormatInput = {
   status?: string;
@@ -13,13 +13,13 @@ export function formatRuntimeStatusWithDetails({
   state,
   details = [],
 }: RuntimeStatusFormatInput): string {
-  const runtimeStatus = status ?? (IS_XCLAW_MODE ? "неизвестно" : "unknown");
+  const runtimeStatus = status ?? (isXClawMode() ? "неизвестно" : "unknown");
   const fullDetails: string[] = [];
   if (pid) {
     fullDetails.push(`pid ${pid}`);
   }
   if (state && state.toLowerCase() !== runtimeStatus) {
-    fullDetails.push(`${IS_XCLAW_MODE ? "статус" : "state"} ${state}`);
+    fullDetails.push(`${isXClawMode() ? "статус" : "state"} ${state}`);
   }
   for (const detail of details) {
     if (detail) {

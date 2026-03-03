@@ -1,7 +1,7 @@
 import { formatCliCommand } from "../cli/command-format.js";
 import { readConfigFileSnapshot } from "../config/config.js";
 import { assertSupportedRuntime } from "../infra/runtime-guard.js";
-import { IS_XCLAW_MODE } from "../xclaw/mode.js";
+import { isXClawMode } from "../xclaw/mode.js";
 import type { RuntimeEnv } from "../runtime.js";
 import { defaultRuntime } from "../runtime.js";
 import { resolveUserPath } from "../utils.js";
@@ -19,7 +19,7 @@ export async function onboardCommand(opts: OnboardOptions, runtime: RuntimeEnv =
   const normalizedAuthChoice = normalizeLegacyOnboardAuthChoice(originalAuthChoice);
   if (opts.nonInteractive && isDeprecatedAuthChoice(originalAuthChoice)) {
     runtime.error(
-      IS_XCLAW_MODE
+      isXClawMode()
         ? [
             `Метод аутентификации "${String(originalAuthChoice)}" устарел.`,
             'Используйте "--auth-choice gemini-api-key" или "--auth-choice openai-api-key".',
@@ -48,20 +48,20 @@ export async function onboardCommand(opts: OnboardOptions, runtime: RuntimeEnv =
     normalizedOpts.secretInputMode !== "plaintext" &&
     normalizedOpts.secretInputMode !== "ref"
   ) {
-    runtime.error(IS_XCLAW_MODE ? 'Неверный --secret-input-mode. Используйте "plaintext" или "ref".' : 'Invalid --secret-input-mode. Use "plaintext" or "ref".');
+    runtime.error(isXClawMode() ? 'Неверный --secret-input-mode. Используйте "plaintext" или "ref".' : 'Invalid --secret-input-mode. Use "plaintext" or "ref".');
     runtime.exit(1);
     return;
   }
 
   if (normalizedOpts.resetScope && !VALID_RESET_SCOPES.has(normalizedOpts.resetScope)) {
-    runtime.error(IS_XCLAW_MODE ? 'Неверный --reset-scope. Используйте "config", "config+creds+sessions", или "full".' : 'Invalid --reset-scope. Use "config", "config+creds+sessions", or "full".');
+    runtime.error(isXClawMode() ? 'Неверный --reset-scope. Используйте "config", "config+creds+sessions", или "full".' : 'Invalid --reset-scope. Use "config", "config+creds+sessions", or "full".');
     runtime.exit(1);
     return;
   }
 
   if (normalizedOpts.nonInteractive && normalizedOpts.acceptRisk !== true) {
     runtime.error(
-      IS_XCLAW_MODE
+      isXClawMode()
         ? [
             "Неинтерактивная настройка требует явного подтверждения рисков.",
             "Документация: https://docs.openclaw.ai/security",
@@ -88,7 +88,7 @@ export async function onboardCommand(opts: OnboardOptions, runtime: RuntimeEnv =
 
   if (process.platform === "win32") {
     runtime.log(
-      IS_XCLAW_MODE
+      isXClawMode()
         ? [
             "Обнаружена Windows — XClaw отлично работает на WSL2!",
             "Обычная Windows может быть капризной.",

@@ -198,6 +198,35 @@ export function buildTelegramParentPeer(params: {
 }
 
 export function buildSenderName(msg: Message) {
+  // Check for forwarded message information
+  if (msg.forward_origin) {
+    const origin = msg.forward_origin;
+    if (origin.type === "user") {
+      const u = origin.sender_user;
+      const name = [u.first_name, u.last_name].filter(Boolean).join(" ").trim();
+      return `(Переслано от ${name || u.username || "пользователя"})`;
+    }
+    if (origin.type === "hidden_user") {
+      return `(Переслано от ${origin.sender_user_name})`;
+    }
+    if (origin.type === "chat") {
+      return `(Переслано из ${origin.sender_chat.title})`;
+    }
+    if (origin.type === "channel") {
+      return `(Переслано из канала ${origin.chat.title})`;
+    }
+  }
+
+  // Legacy forward fields
+  if (msg.forward_from) {
+    const u = msg.forward_from;
+    const name = [u.first_name, u.last_name].filter(Boolean).join(" ").trim();
+    return `(Переслано от ${name || u.username || "пользователя"})`;
+  }
+  if (msg.forward_from_chat) {
+    return `(Переслано из ${msg.forward_from_chat.title})`;
+  }
+
   const name =
     [msg.from?.first_name, msg.from?.last_name].filter(Boolean).join(" ").trim() ||
     msg.from?.username;
@@ -523,6 +552,36 @@ export function normalizeForwardedContext(msg: Message): TelegramForwardedContex
     return null;
   }
   return resolveForwardOrigin(msg.forward_origin);
+}
+
+export function buildSyntheticContext(
+  ctx: Pick<TelegramContext, "me"> & { getFile?: unknown },
+  message: Message,
+): TelegramContext {
+  const getFile =
+    typeof ctx.getFile === "function"
+      ? (ctx.getFile as TelegramContext["getFile"]).bind(ctx as object)
+      : async () => ({});
+  return { message, me: ctx.me, getFile } as TelegramContext;
+}
+
+export function resolveCommandRuntimeContext(params: {
+  msg: Message;
+  isGroup: boolean;
+  isForum: boolean;
+  resolvedThreadId?: number;
+}) {
+  const { msg, isGroup, isForum, resolvedThreadId } = params;
+  const threadSpec: TelegramThreadSpec = {
+    id: resolvedThreadId,
+    scope: isGroup ? (isForum ? "forum" : "none") : "dm",
+  };
+  return {
+    threadSpec,
+    mediaLocalRoots: [],
+    tableMode: "markdown" as const,
+    chunkMode: "length" as const,
+  };
 }
 
 export function extractTelegramLocation(msg: Message): NormalizedLocation | null {

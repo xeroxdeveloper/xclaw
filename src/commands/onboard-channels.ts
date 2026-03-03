@@ -17,7 +17,7 @@ import { DEFAULT_ACCOUNT_ID, normalizeAccountId } from "../routing/session-key.j
 import type { RuntimeEnv } from "../runtime.js";
 import { formatDocsLink } from "../terminal/links.js";
 import type { WizardPrompter, WizardSelectOption } from "../wizard/prompts.js";
-import { IS_XCLAW_MODE } from "../xclaw/mode.js";
+import { isXClawMode } from "../xclaw/mode.js";
 import { resolveOnlyChannelsFromEnv } from "../xclaw/mode.js";
 import { t } from "../xclaw/i18n.js";
 import type { ChannelChoice } from "./onboard-types.js";
@@ -67,19 +67,19 @@ async function promptConfiguredAction(params: {
   const { prompter, label, supportsDisable, supportsDelete } = params;
   const updateOption: WizardSelectOption<ConfiguredChannelAction> = {
     value: "update",
-    label: IS_XCLAW_MODE ? "Изменить настройки" : "Modify settings",
+    label: isXClawMode() ? "Изменить настройки" : "Modify settings",
   };
   const disableOption: WizardSelectOption<ConfiguredChannelAction> = {
     value: "disable",
-    label: IS_XCLAW_MODE ? "Отключить (сохранить конфиг)" : "Disable (keeps config)",
+    label: isXClawMode() ? "Отключить (сохранить конфиг)" : "Disable (keeps config)",
   };
   const deleteOption: WizardSelectOption<ConfiguredChannelAction> = {
     value: "delete",
-    label: IS_XCLAW_MODE ? "Удалить конфиг" : "Delete config",
+    label: isXClawMode() ? "Удалить конфиг" : "Delete config",
   };
   const skipOption: WizardSelectOption<ConfiguredChannelAction> = {
     value: "skip",
-    label: IS_XCLAW_MODE ? "Пропустить (оставить как есть)" : "Skip (leave as-is)",
+    label: isXClawMode() ? "Пропустить (оставить как есть)" : "Skip (leave as-is)",
   };
   const options: Array<WizardSelectOption<ConfiguredChannelAction>> = [
     updateOption,
@@ -88,7 +88,7 @@ async function promptConfiguredAction(params: {
     skipOption,
   ];
   return await prompter.select({
-    message: IS_XCLAW_MODE ? `${label} уже настроен. Что вы хотите сделать?` : `${label} already configured. What do you want to do?`,
+    message: isXClawMode() ? `${label} уже настроен. Что вы хотите сделать?` : `${label} already configured. What do you want to do?`,
     options,
     initialValue: "update",
   });
@@ -207,14 +207,14 @@ async function noteChannelPrimer(
       blurb: channel.blurb,
     }),
   );
-  const cmd = IS_XCLAW_MODE ? "xlaw" : "openclaw";
+  const cmd = isXClawMode() ? "xlaw" : "openclaw";
   await prompter.note(
     [
       t("channel.how.pairing"),
       t("channel.how.approve", { cmd }),
       t("channel.how.open"),
       t("channel.how.multiuser", { cmd }),
-      IS_XCLAW_MODE ? "" : `Docs: ${formatDocsLink("/channels/pairing", "channels/pairing")}`,
+      isXClawMode() ? "" : `Docs: ${formatDocsLink("/channels/pairing", "channels/pairing")}`,
       "",
       ...channelLines,
     ]
@@ -254,7 +254,7 @@ async function maybeConfigureDmPolicies(params: {
   }
 
   const wants = await prompter.confirm({
-    message: IS_XCLAW_MODE ? "Настроить политики доступа ЛС сейчас? (по умолчанию: pairing)" : "Configure DM access policies now? (default: pairing)",
+    message: isXClawMode() ? "Настроить политики доступа ЛС сейчас? (по умолчанию: pairing)" : "Configure DM access policies now? (default: pairing)",
     initialValue: false,
   });
   if (!wants) {
@@ -263,27 +263,27 @@ async function maybeConfigureDmPolicies(params: {
 
   let cfg = params.cfg;
   const selectPolicy = async (policy: ChannelOnboardingDmPolicy) => {
-    const cmd = IS_XCLAW_MODE ? "xclaw" : "openclaw";
+    const cmd = isXClawMode() ? "xclaw" : "openclaw";
     await prompter.note(
       [
-        IS_XCLAW_MODE ? "По умолчанию: pairing (неизвестные ЛС получают код)." : "Default: pairing (unknown DMs get a pairing code).",
-        IS_XCLAW_MODE ? `Одобрить: ${cmd} pairing approve ${policy.channel} <code>` : `Approve: ${formatCliCommand(`openclaw pairing approve ${policy.channel} <code>`)}`,
-        IS_XCLAW_MODE ? `Белый список ЛС: ${policy.policyKey}="allowlist" + список в ${policy.allowFromKey}.` : `Allowlist DMs: ${policy.policyKey}="allowlist" + ${policy.allowFromKey} entries.`,
-        IS_XCLAW_MODE ? `Публичные ЛС: ${policy.policyKey}="open" + ${policy.allowFromKey} содержит "*".` : `Public DMs: ${policy.policyKey}="open" + ${policy.allowFromKey} includes "*".`,
-        IS_XCLAW_MODE ? `Многопользовательский режим: выполните '${cmd} config set session.dmScope "per-channel-peer"' для изоляции.` : "Multi-user DMs: run: " +
+        isXClawMode() ? "По умолчанию: pairing (неизвестные ЛС получают код)." : "Default: pairing (unknown DMs get a pairing code).",
+        isXClawMode() ? `Одобрить: ${cmd} pairing approve ${policy.channel} <code>` : `Approve: ${formatCliCommand(`openclaw pairing approve ${policy.channel} <code>`)}`,
+        isXClawMode() ? `Белый список ЛС: ${policy.policyKey}="allowlist" + список в ${policy.allowFromKey}.` : `Allowlist DMs: ${policy.policyKey}="allowlist" + ${policy.allowFromKey} entries.`,
+        isXClawMode() ? `Публичные ЛС: ${policy.policyKey}="open" + ${policy.allowFromKey} содержит "*".` : `Public DMs: ${policy.policyKey}="open" + ${policy.allowFromKey} includes "*".`,
+        isXClawMode() ? `Многопользовательский режим: выполните '${cmd} config set session.dmScope "per-channel-peer"' для изоляции.` : "Multi-user DMs: run: " +
           formatCliCommand('openclaw config set session.dmScope "per-channel-peer"') +
           ' (or "per-account-channel-peer" for multi-account channels) to isolate sessions.',
-        IS_XCLAW_MODE ? "" : `Docs: ${formatDocsLink("/channels/pairing", "channels/pairing")}`,
+        isXClawMode() ? "" : `Docs: ${formatDocsLink("/channels/pairing", "channels/pairing")}`,
       ].filter(l => l !== "").join("\n"),
-      IS_XCLAW_MODE ? `Доступ к ${policy.label} (ЛС)` : `${policy.label} DM access`,
+      isXClawMode() ? `Доступ к ${policy.label} (ЛС)` : `${policy.label} DM access`,
     );
     return (await prompter.select({
-      message: IS_XCLAW_MODE ? `Политика ЛС для ${policy.label}` : `${policy.label} DM policy`,
+      message: isXClawMode() ? `Политика ЛС для ${policy.label}` : `${policy.label} DM policy`,
       options: [
-        { value: "pairing", label: IS_XCLAW_MODE ? "Сопряжение (рекомендуется)" : "Pairing (recommended)" },
-        { value: "allowlist", label: IS_XCLAW_MODE ? "Белый список (только свои)" : "Allowlist (specific users only)" },
-        { value: "open", label: IS_XCLAW_MODE ? "Открыто (публично)" : "Open (public inbound DMs)" },
-        { value: "disabled", label: IS_XCLAW_MODE ? "Отключено (игнорировать)" : "Disabled (ignore DMs)" },
+        { value: "pairing", label: isXClawMode() ? "Сопряжение (рекомендуется)" : "Pairing (recommended)" },
+        { value: "allowlist", label: isXClawMode() ? "Белый список (только свои)" : "Allowlist (specific users only)" },
+        { value: "open", label: isXClawMode() ? "Открыто (публично)" : "Open (public inbound DMs)" },
+        { value: "disabled", label: isXClawMode() ? "Отключено (игнорировать)" : "Disabled (ignore DMs)" },
       ],
     })) as DmPolicy;
   };
@@ -326,13 +326,13 @@ export async function setupChannels(
   const { installedPlugins, catalogEntries, statusByChannel, statusLines } =
     await collectChannelStatus({ cfg: next, options, accountOverrides });
   if (!options?.skipStatusNote && statusLines.length > 0) {
-    await prompter.note(statusLines.join("\n"), IS_XCLAW_MODE ? "Статус каналов" : "Channel status");
+    await prompter.note(statusLines.join("\n"), isXClawMode() ? "Статус каналов" : "Channel status");
   }
 
   const shouldConfigure = options?.skipConfirm
     ? true
     : await prompter.confirm({
-        message: IS_XCLAW_MODE ? "Настроить чат-каналы сейчас?" : "Configure chat channels now?",
+        message: isXClawMode() ? "Настроить чат-каналы сейчас?" : "Configure chat channels now?",
         initialValue: true,
       });
   if (!shouldConfigure) {
@@ -344,7 +344,7 @@ export async function setupChannels(
     .map((meta) => ({
       id: meta.id,
       label: meta.label,
-      blurb: IS_XCLAW_MODE ? meta.blurb : meta.blurb, // meta.blurb is already translated in registry.ts
+      blurb: isXClawMode() ? meta.blurb : meta.blurb, // meta.blurb is already translated in registry.ts
     }));
   const coreIds = new Set(corePrimer.map((entry) => entry.id));
   const primerChannels = [
@@ -391,10 +391,10 @@ export async function setupChannels(
     const plugin = getChannelPlugin(channel);
     if (!plugin) {
       if (next.plugins?.entries?.[channel]?.enabled === false) {
-        return IS_XCLAW_MODE ? "плагин отключен" : "plugin disabled";
+        return isXClawMode() ? "плагин отключен" : "plugin disabled";
       }
       if (next.plugins?.enabled === false) {
-        return IS_XCLAW_MODE ? "плагины отключены" : "plugins disabled";
+        return isXClawMode() ? "плагины отключены" : "plugins disabled";
       }
       return undefined;
     }
@@ -411,7 +411,7 @@ export async function setupChannels(
     ) {
       enabled = (next.channels as Record<string, { enabled?: boolean }>)[channel]?.enabled;
     }
-    return enabled === false ? (IS_XCLAW_MODE ? "отключено" : "disabled") : undefined;
+    return enabled === false ? (isXClawMode() ? "отключено" : "disabled") : undefined;
   };
 
   const buildSelectionOptions = (
@@ -479,10 +479,10 @@ export async function setupChannels(
     next = result.config;
     if (!result.enabled) {
       await prompter.note(
-        IS_XCLAW_MODE 
+        isXClawMode() 
           ? `Не удалось включить ${channel}: ${result.reason ?? "плагин отключен"}.`
           : `Cannot enable ${channel}: ${result.reason ?? "plugin disabled"}.`,
-        IS_XCLAW_MODE ? "Настройка канала" : "Channel setup",
+        isXClawMode() ? "Настройка канала" : "Channel setup",
       );
       return false;
     }
@@ -499,17 +499,17 @@ export async function setupChannels(
       const adapter = getChannelOnboardingAdapter(channel);
       if (adapter) {
         await prompter.note(
-          IS_XCLAW_MODE 
+          isXClawMode() 
             ? `Плагин ${channel} недоступен (продолжение настройки). Если канал не заработает, выполните \`xclaw plugins list\` и \`xclaw plugins enable ${channel}\`, затем перезапустите шлюз.`
             : `${channel} plugin not available (continuing with onboarding). If the channel still doesn't work after setup, run \`${formatCliCommand(
             "openclaw plugins list",
           )}\` and \`${formatCliCommand("openclaw plugins enable " + channel)}\`, then restart the gateway.`,
-          IS_XCLAW_MODE ? "Настройка канала" : "Channel setup",
+          isXClawMode() ? "Настройка канала" : "Channel setup",
         );
         await refreshStatus(channel);
         return true;
       }
-      await prompter.note(IS_XCLAW_MODE ? `Плагин ${channel} недоступен.` : `${channel} plugin not available.`, IS_XCLAW_MODE ? "Настройка канала" : "Channel setup");
+      await prompter.note(isXClawMode() ? `Плагин ${channel} недоступен.` : `${channel} plugin not available.`, isXClawMode() ? "Настройка канала" : "Channel setup");
       return false;
     }
     await refreshStatus(channel);
@@ -712,7 +712,7 @@ export async function setupChannels(
         {
           value: "__skip__",
           label: t("auth.skip"),
-          hint: IS_XCLAW_MODE
+          hint: isXClawMode()
             ? "Вы можете добавить каналы позже"
             : `You can add channels later via \`${formatCliCommand("openclaw channels add")}\``,
         },
@@ -728,13 +728,13 @@ export async function setupChannels(
     while (true) {
       const { entries } = getChannelEntries();
       const choice = (await prompter.select({
-        message: IS_XCLAW_MODE ? "Выберите канал" : "Select a channel",
+        message: isXClawMode() ? "Выберите канал" : "Select a channel",
         options: [
           ...buildSelectionOptions(entries),
           {
             value: doneValue,
-            label: IS_XCLAW_MODE ? "Готово" : "Finished",
-            hint: selection.length > 0 ? (IS_XCLAW_MODE ? "Завершить" : "Done") : (IS_XCLAW_MODE ? "Пропустить" : "Skip for now"),
+            label: isXClawMode() ? "Готово" : "Finished",
+            hint: selection.length > 0 ? (isXClawMode() ? "Завершить" : "Done") : (isXClawMode() ? "Пропустить" : "Skip for now"),
           },
         ],
         initialValue,

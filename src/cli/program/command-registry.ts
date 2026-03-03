@@ -221,10 +221,37 @@ const coreEntries: CoreCliEntry[] = [
         description: "Добавить Telegram ID в список владельцев",
         hasSubcommands: false,
       },
+      {
+        name: "remove",
+        description: "Удалить Telegram ID из списка владельцев (интерактивно)",
+        hasSubcommands: false,
+      },
+      {
+        name: "rank",
+        description: "Управление правами пользователей (интерактивно)",
+        hasSubcommands: false,
+      },
     ],
     register: async ({ program }) => {
-      const mod = await import("./register.add-owner.js");
-      mod.registerAddOwnerCommand(program);
+      const addMod = await import("./register.add-owner.js");
+      const removeMod = await import("./register.remove-owner.js");
+      const rankMod = await import("./register.rank.js");
+      addMod.registerAddOwnerCommand(program);
+      removeMod.registerRemoveOwnerCommand(program);
+      rankMod.registerRankCommand(program);
+    },
+  },
+  {
+    commands: [
+      {
+        name: "autonomous",
+        description: "Управление автономными постами в Telegram",
+        hasSubcommands: true,
+      },
+    ],
+    register: async ({ program }) => {
+      const mod = await import("./register.autonomous.js");
+      mod.registerAutonomousCommand(program);
     },
   },
   {

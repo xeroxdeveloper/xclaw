@@ -1,12 +1,12 @@
 import { readFileSync, existsSync } from "node:fs";
 import JSON5 from "json5";
 import { CONFIG_PATH } from "../config/config.js";
-import { IS_XCLAW_MODE } from "./mode.js";
+import { isXClawMode } from "./mode.js";
 
 let currentLang = "ru";
 
 function loadLang() {
-  if (!IS_XCLAW_MODE) {
+  if (!isXClawMode()) {
     currentLang = "en";
     return;
   }
@@ -83,7 +83,7 @@ const translations: Record<string, Record<string, string>> = {
     "channel.select.message": "Выберите канал (Быстрый старт)",
     "channel.selected.title": "Выбранные каналы",
     "onboard.success.title": "Настройка завершена!",
-    "onboard.success.message": "XClaw Diamond Edition готов к работе. Используйте '/help' в Telegram.",
+    "onboard.success.message": "XClaw Box Alpha готов к работе. Используйте '/help' в Telegram.",
     "onboard.risk.message": "Я понимаю, что это персональный инструмент по умолчанию, и совместное использование требует защиты. Продолжить?",
     "onboard.invalid.config": "Невалидный конфиг",
     "onboard.config.issues": "Проблемы конфига",
@@ -141,7 +141,7 @@ const translations: Record<string, Record<string, string>> = {
     "channel.select.message": "Select channel (QuickStart)",
     "channel.selected.title": "Selected channels",
     "onboard.success.title": "Onboarding complete!",
-    "onboard.success.message": "XClaw Diamond Edition is ready. Use '/help' in Telegram.",
+    "onboard.success.message": "XClaw Box Alpha is ready. Use '/help' in Telegram.",
     "onboard.risk.message": "I understand this is personal-by-default and shared/multi-user use requires lock-down. Continue?",
     "onboard.invalid.config": "Invalid config",
     "onboard.config.issues": "Config issues",

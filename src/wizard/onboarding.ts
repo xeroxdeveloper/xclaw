@@ -1,5 +1,5 @@
 import { formatCliCommand } from "../cli/command-format.js";
-import { IS_XCLAW_MODE } from "../xclaw/mode.js";
+import { isXClawMode } from "../xclaw/mode.js";
 import type {
   GatewayAuthChoice,
   OnboardMode,
@@ -29,7 +29,7 @@ async function requireRiskAcknowledgement(params: {
   }
 
   await params.prompter.note(
-    IS_XCLAW_MODE
+    isXClawMode()
       ? [
           "Предупреждение о безопасности — пожалуйста, прочтите.",
           "",
@@ -83,7 +83,7 @@ async function requireRiskAcknowledgement(params: {
           "",
           "Must read: https://docs.openclaw.ai/gateway/security",
         ].join("\n"),
-    IS_XCLAW_MODE ? "Безопасность" : "Security",
+    isXClawMode() ? "Безопасность" : "Security",
   );
 
 
@@ -103,7 +103,7 @@ export async function runOnboardingWizard(
 ) {
   const onboardHelpers = await import("../commands/onboard-helpers.js");
   onboardHelpers.printWizardHeader(runtime);
-  await prompter.intro(IS_XCLAW_MODE ? "Настройка XClaw" : "OpenClaw onboarding");
+  await prompter.intro(isXClawMode() ? "Настройка XClaw" : "OpenClaw onboarding");
   await requireRiskAcknowledgement({ opts, prompter });
 
   const snapshot = await readConfigFileSnapshot();
@@ -119,7 +119,7 @@ export async function runOnboardingWizard(
         [
           ...snapshot.issues.map((iss) => `- ${iss.path}: ${iss.message}`),
           "",
-          IS_XCLAW_MODE ? "" : "Docs: https://docs.openclaw.ai/gateway/configuration",
+          isXClawMode() ? "" : "Docs: https://docs.openclaw.ai/gateway/configuration",
         ]
           .filter((l) => l !== "")
           .join("\n"),
@@ -127,16 +127,16 @@ export async function runOnboardingWizard(
       );
     }
     await prompter.outro(
-      t("onboard.config.invalid_outro", { cmd: formatCliCommand(IS_XCLAW_MODE ? "xclaw doctor" : "openclaw doctor") }),
+      t("onboard.config.invalid_outro", { cmd: formatCliCommand(isXClawMode() ? "xclaw doctor" : "openclaw doctor") }),
     );
     runtime.exit(1);
     return;
   }
 
-  const quickstartHint = IS_XCLAW_MODE
+  const quickstartHint = isXClawMode()
     ? `Настройте детали позже через ${formatCliCommand("xclaw configure")}.`
     : `Configure details later via ${formatCliCommand("openclaw configure")}.`;
-  const manualHint = IS_XCLAW_MODE
+  const manualHint = isXClawMode()
     ? "Настройка порта, сети, Tailscale и параметров аутентификации."
     : "Configure port, network, Tailscale, and auth options.";
   const explicitFlowRaw = opts.flow?.trim();
@@ -167,10 +167,10 @@ export async function runOnboardingWizard(
 
   if (opts.mode === "remote" && flow === "quickstart") {
     await prompter.note(
-      IS_XCLAW_MODE
+      isXClawMode()
         ? "Быстрый старт поддерживает только локальные шлюзы. Переключение в ручной режим."
         : "QuickStart only supports local gateways. Switching to Manual mode.",
-      IS_XCLAW_MODE ? "Быстрый старт" : "QuickStart",
+      isXClawMode() ? "Быстрый старт" : "QuickStart",
     );
     flow = "advanced";
   }
@@ -178,7 +178,7 @@ export async function runOnboardingWizard(
   if (snapshot.exists) {
     await prompter.note(
       onboardHelpers.summarizeExistingConfig(baseConfig),
-      IS_XCLAW_MODE ? "Обнаружен существующий конфиг" : "Existing config detected",
+      isXClawMode() ? "Обнаружен существующий конфиг" : "Existing config detected",
     );
 
     const action = await prompter.select({
@@ -266,28 +266,28 @@ export async function runOnboardingWizard(
   if (flow === "quickstart") {
     const formatBind = (value: "loopback" | "lan" | "auto" | "custom" | "tailnet") => {
       if (value === "loopback") {
-        return IS_XCLAW_MODE ? "Локально (127.0.0.1)" : "Loopback (127.0.0.1)";
+        return isXClawMode() ? "Локально (127.0.0.1)" : "Loopback (127.0.0.1)";
       }
       if (value === "lan") {
         return "LAN";
       }
       if (value === "custom") {
-        return IS_XCLAW_MODE ? "Свой IP" : "Custom IP";
+        return isXClawMode() ? "Свой IP" : "Custom IP";
       }
       if (value === "tailnet") {
         return "Tailnet (Tailscale IP)";
       }
-      return IS_XCLAW_MODE ? "Авто" : "Auto";
+      return isXClawMode() ? "Авто" : "Auto";
     };
     const formatAuth = (value: GatewayAuthChoice) => {
       if (value === "token") {
-        return IS_XCLAW_MODE ? "Токен (по умолчанию)" : "Token (default)";
+        return isXClawMode() ? "Токен (по умолчанию)" : "Token (default)";
       }
-      return IS_XCLAW_MODE ? "Пароль" : "Password";
+      return isXClawMode() ? "Пароль" : "Password";
     };
     const formatTailscale = (value: "off" | "serve" | "funnel") => {
       if (value === "off") {
-        return IS_XCLAW_MODE ? "Выкл" : "Off";
+        return isXClawMode() ? "Выкл" : "Off";
       }
       if (value === "serve") {
         return "Serve";
@@ -296,28 +296,28 @@ export async function runOnboardingWizard(
     };
     const quickstartLines = quickstartGateway.hasExisting
       ? [
-          IS_XCLAW_MODE
+          isXClawMode()
             ? "Сохранение текущих настроек шлюза:"
             : "Keeping your current gateway settings:",
-          `${IS_XCLAW_MODE ? "Порт" : "Gateway port"}: ${quickstartGateway.port}`,
-          `${IS_XCLAW_MODE ? "Привязка" : "Gateway bind"}: ${formatBind(quickstartGateway.bind)}`,
+          `${isXClawMode() ? "Порт" : "Gateway port"}: ${quickstartGateway.port}`,
+          `${isXClawMode() ? "Привязка" : "Gateway bind"}: ${formatBind(quickstartGateway.bind)}`,
           ...(quickstartGateway.bind === "custom" && quickstartGateway.customBindHost
             ? [
-                `${IS_XCLAW_MODE ? "Свой IP шлюза" : "Gateway custom IP"}: ${quickstartGateway.customBindHost}`,
+                `${isXClawMode() ? "Свой IP шлюза" : "Gateway custom IP"}: ${quickstartGateway.customBindHost}`,
               ]
             : []),
-          `${IS_XCLAW_MODE ? "Аутентификация" : "Gateway auth"}: ${formatAuth(quickstartGateway.authMode)}`,
-          `${IS_XCLAW_MODE ? "Tailscale" : "Tailscale exposure"}: ${formatTailscale(quickstartGateway.tailscaleMode)}`,
-          IS_XCLAW_MODE ? "Переход к настройке каналов." : "Direct to chat channels.",
+          `${isXClawMode() ? "Аутентификация" : "Gateway auth"}: ${formatAuth(quickstartGateway.authMode)}`,
+          `${isXClawMode() ? "Tailscale" : "Tailscale exposure"}: ${formatTailscale(quickstartGateway.tailscaleMode)}`,
+          isXClawMode() ? "Переход к настройке каналов." : "Direct to chat channels.",
         ]
       : [
-          `${IS_XCLAW_MODE ? "Порт шлюза" : "Gateway port"}: ${DEFAULT_GATEWAY_PORT}`,
-          IS_XCLAW_MODE ? "Привязка: Локально (127.0.0.1)" : "Gateway bind: Loopback (127.0.0.1)",
-          IS_XCLAW_MODE ? "Аутентификация: Токен (по умолчанию)" : "Gateway auth: Token (default)",
-          IS_XCLAW_MODE ? "Tailscale: Выкл" : "Tailscale exposure: Off",
-          IS_XCLAW_MODE ? "Переход к настройке каналов." : "Direct to chat channels.",
+          `${isXClawMode() ? "Порт шлюза" : "Gateway port"}: ${DEFAULT_GATEWAY_PORT}`,
+          isXClawMode() ? "Привязка: Локально (127.0.0.1)" : "Gateway bind: Loopback (127.0.0.1)",
+          isXClawMode() ? "Аутентификация: Токен (по умолчанию)" : "Gateway auth: Token (default)",
+          isXClawMode() ? "Tailscale: Выкл" : "Tailscale exposure: Off",
+          isXClawMode() ? "Переход к настройке каналов." : "Direct to chat channels.",
         ];
-    await prompter.note(quickstartLines.join("\n"), IS_XCLAW_MODE ? "Быстрый старт" : "QuickStart");
+    await prompter.note(quickstartLines.join("\n"), isXClawMode() ? "Быстрый старт" : "QuickStart");
   }
 
   const localPort = resolveGatewayPort(baseConfig);
@@ -340,31 +340,31 @@ export async function runOnboardingWizard(
     (flow === "quickstart"
       ? "local"
       : ((await prompter.select({
-          message: IS_XCLAW_MODE ? "Что вы хотите настроить?" : "What do you want to set up?",
+          message: isXClawMode() ? "Что вы хотите настроить?" : "What do you want to set up?",
           options: [
             {
               value: "local",
-              label: IS_XCLAW_MODE ? "Локальный шлюз (на этой машине)" : "Local gateway (this machine)",
+              label: isXClawMode() ? "Локальный шлюз (на этой машине)" : "Local gateway (this machine)",
               hint: localProbe.ok
-                ? IS_XCLAW_MODE
+                ? isXClawMode()
                   ? `Шлюз доступен (${localUrl})`
                   : `Gateway reachable (${localUrl})`
-                : IS_XCLAW_MODE
+                : isXClawMode()
                   ? `Шлюз не обнаружен (${localUrl})`
                   : `No gateway detected (${localUrl})`,
             },
             {
               value: "remote",
-              label: IS_XCLAW_MODE ? "Удаленный шлюз (только информация)" : "Remote gateway (info-only)",
+              label: isXClawMode() ? "Удаленный шлюз (только информация)" : "Remote gateway (info-only)",
               hint: !remoteUrl
-                ? IS_XCLAW_MODE
+                ? isXClawMode()
                   ? "Удаленный URL еще не настроен"
                   : "No remote URL configured yet"
                 : remoteProbe?.ok
-                  ? IS_XCLAW_MODE
+                  ? isXClawMode()
                     ? `Шлюз доступен (${remoteUrl})`
                     : `Gateway reachable (${remoteUrl})`
-                  : IS_XCLAW_MODE
+                  : isXClawMode()
                     ? `Настроен, но недоступен (${remoteUrl})`
                     : `Configured but unreachable (${remoteUrl})`,
             },
@@ -378,7 +378,7 @@ export async function runOnboardingWizard(
     nextConfig = onboardHelpers.applyWizardMetadata(nextConfig, { command: "onboard", mode });
     await writeConfigFile(nextConfig);
     logConfigUpdated(runtime);
-    await prompter.outro(IS_XCLAW_MODE ? "Удаленный шлюз настроен." : "Remote gateway configured.");
+    await prompter.outro(isXClawMode() ? "Удаленный шлюз настроен." : "Remote gateway configured.");
     return;
   }
 
@@ -457,7 +457,7 @@ export async function runOnboardingWizard(
 
   await warnIfModelConfigLooksOff(nextConfig, prompter);
 
-  if (IS_XCLAW_MODE) {
+  if (isXClawMode()) {
     const ownerOnly = await prompter.confirm({
       message: "Отвечать только владельцу? (ownerOnly)",
       initialValue: true,
@@ -487,8 +487,8 @@ export async function runOnboardingWizard(
 
   if (opts.skipChannels ?? opts.skipProviders) {
     await prompter.note(
-      IS_XCLAW_MODE ? "Пропуск настройки каналов." : "Skipping channel setup.",
-      IS_XCLAW_MODE ? "Каналы" : "Channels",
+      isXClawMode() ? "Пропуск настройки каналов." : "Skipping channel setup.",
+      isXClawMode() ? "Каналы" : "Channels",
     );
   } else {
     const { listChannelPlugins } = await import("../channels/plugins/index.js");
@@ -517,8 +517,8 @@ export async function runOnboardingWizard(
 
   if (opts.skipSkills) {
     await prompter.note(
-      IS_XCLAW_MODE ? "Пропуск настройки навыков." : "Skipping skills setup.",
-      IS_XCLAW_MODE ? "Навыки" : "Skills",
+      isXClawMode() ? "Пропуск настройки навыков." : "Skipping skills setup.",
+      isXClawMode() ? "Навыки" : "Skills",
     );
   } else {
     const { setupSkills } = await import("../commands/onboard-skills.js");

@@ -18,7 +18,7 @@ import {
 import { isCanonicalDottedDecimalIPv4, isLoopbackIpAddress } from "../shared/net/ip.js";
 import { isRecord } from "../utils.js";
 import {
-  IS_XCLAW_MODE,
+  isXClawMode,
   resolveOnlyChannelsFromEnv,
   resolveOnlyModelProvidersFromEnv,
 } from "../xclaw/mode.js";
@@ -126,7 +126,7 @@ function resolveExplicitModelProvider(modelRef: string | undefined): string | nu
 }
 
 function validateXClawModeRestrictions(config: OpenClawConfig): ConfigValidationIssue[] {
-  if (!IS_XCLAW_MODE) {
+  if (!isXClawMode()) {
     return [];
   }
   const issues: ConfigValidationIssue[] = [];

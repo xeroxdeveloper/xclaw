@@ -1,6 +1,6 @@
 import { DEFAULT_CONTEXT_TOKENS } from "../agents/defaults.js";
 import { normalizeProviderId, parseModelRef } from "../agents/model-selection.js";
-import { IS_XCLAW_MODE } from "../xclaw/mode.js";
+import { isXClawMode } from "../xclaw/mode.js";
 import { DEFAULT_AGENT_MAX_CONCURRENT, DEFAULT_SUBAGENT_MAX_CONCURRENT } from "./agent-limits.js";
 import { resolveAgentModelPrimaryValue } from "./model-input.js";
 import {
@@ -533,13 +533,14 @@ export function applyCompactionDefaults(cfg: OpenClawConfig): OpenClawConfig {
 }
 
 export function applyXClawDefaults(cfg: OpenClawConfig): OpenClawConfig {
-  if (!IS_XCLAW_MODE) {
+  if (!isXClawMode()) {
     return cfg;
   }
   
-  const xclaw = cfg.xclaw ?? {};
+  let nextCfg = { ...cfg };
   let mutated = false;
   
+  const xclaw = nextCfg.xclaw ?? {};
   const nextXClaw = { ...xclaw };
   
   if (nextXClaw.lang === undefined) {
@@ -562,14 +563,36 @@ export function applyXClawDefaults(cfg: OpenClawConfig): OpenClawConfig {
     mutated = true;
   }
 
-  if (!mutated) {
-    return cfg;
+  if (mutated) {
+    nextCfg.xclaw = nextXClaw;
   }
 
-  return {
-    ...cfg,
-    xclaw: nextXClaw,
-  };
+  // Force Telegram settings for UX
+  if (nextCfg.channels?.telegram) {
+    const tg = nextCfg.channels.telegram as any;
+    if (tg.groupPolicy === undefined || tg.groupPolicy === "allowlist") {
+      tg.groupPolicy = "open";
+      mutated = true;
+    }
+  }
+
+  // Force reactions
+  if (nextCfg.messages?.statusReactions?.enabled === undefined) {
+    nextCfg.messages = {
+      ...nextCfg.messages,
+      statusReactions: { ...nextCfg.messages?.statusReactions, enabled: true },
+    };
+    mutated = true;
+  }
+  if (nextCfg.messages?.ackReaction === undefined) {
+    nextCfg.messages = {
+      ...nextCfg.messages,
+      ackReaction: "👀",
+    };
+    mutated = true;
+  }
+
+  return nextCfg;
 }
 
 export function resetSessionDefaultsWarningForTests() {

@@ -1,4 +1,4 @@
-import { IS_XCLAW_MODE, isXClawMode } from "../xclaw/mode.js";
+import { isXClawMode } from "../xclaw/mode.js";
 import {
   buildAuthHealthSummary,
   DEFAULT_OAUTH_WARN_MS,
@@ -22,7 +22,7 @@ export async function maybeRepairAnthropicOAuthProfileId(
   cfg: OpenClawConfig,
   prompter: DoctorPrompter,
 ): Promise<OpenClawConfig> {
-  if (IS_XCLAW_MODE) {
+  if (isXClawMode()) {
     return cfg;
   }
   const store = ensureAuthProfileStore();
@@ -36,9 +36,9 @@ export async function maybeRepairAnthropicOAuthProfileId(
     return cfg;
   }
 
-  note(repair.changes.map((c) => `- ${c}`).join("\n"), IS_XCLAW_MODE ? "Профили авторизации" : "Auth profiles");
+  note(repair.changes.map((c) => `- ${c}`).join("\n"), isXClawMode() ? "Профили авторизации" : "Auth profiles");
   const apply = await prompter.confirm({
-    message: IS_XCLAW_MODE ? "Обновить ID профиля Anthropic в конфиге?" : "Update Anthropic OAuth profile id in config now?",
+    message: isXClawMode() ? "Обновить ID профиля Anthropic в конфиге?" : "Update Anthropic OAuth profile id in config now?",
     initialValue: true,
   });
   if (!apply) {
@@ -119,7 +119,7 @@ export async function maybeRemoveDeprecatedCliAuthProfiles(
 ): Promise<OpenClawConfig> {
   const store = ensureAuthProfileStore(undefined, { allowKeychainPrompt: false });
   const deprecated = new Set<string>();
-  if (!IS_XCLAW_MODE && (store.profiles[CLAUDE_CLI_PROFILE_ID] || cfg.auth?.profiles?.[CLAUDE_CLI_PROFILE_ID])) {
+  if (!isXClawMode() && (store.profiles[CLAUDE_CLI_PROFILE_ID] || cfg.auth?.profiles?.[CLAUDE_CLI_PROFILE_ID])) {
     deprecated.add(CLAUDE_CLI_PROFILE_ID);
   }
   if (store.profiles[CODEX_CLI_PROFILE_ID] || cfg.auth?.profiles?.[CODEX_CLI_PROFILE_ID]) {
@@ -130,23 +130,23 @@ export async function maybeRemoveDeprecatedCliAuthProfiles(
     return cfg;
   }
 
-  const lines = [IS_XCLAW_MODE ? "Обнаружены устаревшие внешние профили CLI (больше не поддерживаются):" : "Deprecated external CLI auth profiles detected (no longer supported):"];
+  const lines = [isXClawMode() ? "Обнаружены устаревшие внешние профили CLI (больше не поддерживаются):" : "Deprecated external CLI auth profiles detected (no longer supported):"];
   if (deprecated.has(CLAUDE_CLI_PROFILE_ID)) {
     lines.push(
-      `- ${CLAUDE_CLI_PROFILE_ID} (Anthropic): ${IS_XCLAW_MODE ? "используйте токен настройки" : "use setup-token"} → ${formatCliCommand(`${IS_XCLAW_MODE ? "xclaw" : "openclaw"} models auth setup-token`)}`,
+      `- ${CLAUDE_CLI_PROFILE_ID} (Anthropic): ${isXClawMode() ? "используйте токен настройки" : "use setup-token"} → ${formatCliCommand(`${isXClawMode() ? "xclaw" : "openclaw"} models auth setup-token`)}`,
     );
   }
   if (deprecated.has(CODEX_CLI_PROFILE_ID)) {
     lines.push(
-      `- ${CODEX_CLI_PROFILE_ID} (OpenAI Codex): ${IS_XCLAW_MODE ? "используйте OAuth" : "use OAuth"} → ${formatCliCommand(
-        `${IS_XCLAW_MODE ? "xclaw" : "openclaw"} models auth login --provider openai-codex`,
+      `- ${CODEX_CLI_PROFILE_ID} (OpenAI Codex): ${isXClawMode() ? "используйте OAuth" : "use OAuth"} → ${formatCliCommand(
+        `${isXClawMode() ? "xclaw" : "openclaw"} models auth login --provider openai-codex`,
       )}`,
     );
   }
-  note(lines.join("\n"), IS_XCLAW_MODE ? "Профили авторизации" : "Auth profiles");
+  note(lines.join("\n"), isXClawMode() ? "Профили авторизации" : "Auth profiles");
 
   const shouldRemove = await prompter.confirmRepair({
-    message: IS_XCLAW_MODE ? "Удалить устаревшие профили CLI сейчас?" : "Remove deprecated CLI auth profiles now?",
+    message: isXClawMode() ? "Удалить устаревшие профили CLI сейчас?" : "Remove deprecated CLI auth profiles now?",
     initialValue: true,
   });
   if (!shouldRemove) {
@@ -195,9 +195,9 @@ export async function maybeRemoveDeprecatedCliAuthProfiles(
   if (pruned.changed) {
     note(
       Array.from(deprecated.values())
-        .map((id) => IS_XCLAW_MODE ? `- удален ${id} из конфига` : `- removed ${id} from config`)
+        .map((id) => isXClawMode() ? `- удален ${id} из конфига` : `- removed ${id} from config`)
         .join("\n"),
-      IS_XCLAW_MODE ? "Изменения доктора" : "Doctor changes",
+      isXClawMode() ? "Изменения доктора" : "Doctor changes",
     );
   }
   return pruned.next;
@@ -216,28 +216,28 @@ export function resolveUnusableProfileHint(params: {
 }): string {
   if (params.kind === "disabled") {
     if (params.reason === "billing") {
-      return IS_XCLAW_MODE ? "Пополните баланс (биллинг провайдера) или смените провайдера." : "Top up credits (provider billing) or switch provider.";
+      return isXClawMode() ? "Пополните баланс (биллинг провайдера) или смените провайдера." : "Top up credits (provider billing) or switch provider.";
     }
     if (params.reason === "auth_permanent" || params.reason === "auth") {
-      return IS_XCLAW_MODE ? "Обновите или замените учетные данные, затем попробуйте снова." : "Refresh or replace credentials, then retry.";
+      return isXClawMode() ? "Обновите или замените учетные данные, затем попробуйте снова." : "Refresh or replace credentials, then retry.";
     }
   }
-  return IS_XCLAW_MODE ? "Подождите завершения таймаута или смените провайдера." : "Wait for cooldown or switch provider.";
+  return isXClawMode() ? "Подождите завершения таймаута или смените провайдера." : "Wait for cooldown or switch provider.";
 }
 
 function formatAuthIssueHint(issue: AuthIssue): string | null {
-  const cmd = IS_XCLAW_MODE ? "xclaw" : "openclaw";
+  const cmd = isXClawMode() ? "xclaw" : "openclaw";
   if (issue.provider === "anthropic" && issue.profileId === CLAUDE_CLI_PROFILE_ID) {
-    return `${IS_XCLAW_MODE ? "Устаревший профиль. Используйте" : "Deprecated profile. Use"} ${formatCliCommand(`${cmd} models auth setup-token`)} ${IS_XCLAW_MODE ? "или" : "or"} ${formatCliCommand(
+    return `${isXClawMode() ? "Устаревший профиль. Используйте" : "Deprecated profile. Use"} ${formatCliCommand(`${cmd} models auth setup-token`)} ${isXClawMode() ? "или" : "or"} ${formatCliCommand(
       `${cmd} configure`,
     )}.`;
   }
   if (issue.provider === "openai-codex" && issue.profileId === CODEX_CLI_PROFILE_ID) {
-    return `${IS_XCLAW_MODE ? "Устаревший профиль. Используйте OAuth →" : "Deprecated profile. Use OAuth →"} ${formatCliCommand(
+    return `${isXClawMode() ? "Устаревший профиль. Используйте OAuth →" : "Deprecated profile. Use OAuth →"} ${formatCliCommand(
       `${cmd} models auth login --provider openai-codex`,
-    )} ${IS_XCLAW_MODE ? "или" : "or"} ${formatCliCommand(`${cmd} configure`)}.`;
+    )} ${isXClawMode() ? "или" : "or"} ${formatCliCommand(`${cmd} configure`)}.`;
   }
-  return IS_XCLAW_MODE 
+  return isXClawMode() 
     ? `Авторизуйтесь снова через \`${formatCliCommand("xclaw configure")}\` или \`${formatCliCommand("xclaw onboard")}\`.`
     : `Re-auth via \`${formatCliCommand("openclaw configure")}\` or \`${formatCliCommand("openclaw onboard")}\`.`;
 }
@@ -281,7 +281,7 @@ export async function noteAuthProfileHealth(params: {
   })();
 
   if (unusable.length > 0) {
-    note(unusable.join("\n"), IS_XCLAW_MODE ? "Таймауты профилей авторизации" : "Auth profile cooldowns");
+    note(unusable.join("\n"), isXClawMode() ? "Таймауты профилей авторизации" : "Auth profile cooldowns");
   }
 
   let summary = buildAuthHealthSummary({
@@ -305,7 +305,7 @@ export async function noteAuthProfileHealth(params: {
   }
 
   const shouldRefresh = await params.prompter.confirmRepair({
-    message: IS_XCLAW_MODE ? "Обновить истекающие токены OAuth? (статические токены требуют повторной авторизации)" : "Refresh expiring OAuth tokens now? (static tokens need re-auth)",
+    message: isXClawMode() ? "Обновить истекающие токены OAuth? (статические токены требуют повторной авторизации)" : "Refresh expiring OAuth tokens now? (static tokens need re-auth)",
     initialValue: true,
   });
 
@@ -351,7 +351,7 @@ export async function noteAuthProfileHealth(params: {
           }),
         )
         .join("\n"),
-      IS_XCLAW_MODE ? "Авторизация моделей" : "Model auth",
+      isXClawMode() ? "Авторизация моделей" : "Model auth",
     );
   }
 }

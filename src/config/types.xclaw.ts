@@ -15,4 +15,13 @@ export type XClawConfig = {
   autoUpdate?: boolean;
   /** List of allowed group IDs. */
   groupWhitelist?: string[];
+  /** Ranks for users (e.g. { "tg:123456": "admin" }). */
+  ranks?: Record<string, string>;
+  /** Autonomous posting configuration. */
+  autonomous?: Array<{
+    chatId: string | number;
+    intervalMs: number;
+    lastRunAt?: number;
+    prompt?: string;
+  }>;
 };

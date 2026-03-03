@@ -9,7 +9,7 @@ import {
 } from "../secrets/ref-contract.js";
 import { resolveSecretRefString } from "../secrets/resolve.js";
 import type { WizardPrompter } from "../wizard/prompts.js";
-import { IS_XCLAW_MODE } from "../xclaw/mode.js";
+import { isXClawMode } from "../xclaw/mode.js";
 import { t } from "../xclaw/i18n.js";
 import { formatApiKeyPreview } from "./auth-choice.api-key.js";
 import type { ApplyAuthChoiceParams } from "./auth-choice.apply.js";
@@ -346,14 +346,14 @@ export async function resolveSecretInputModeForEnvSelection(params: {
       {
         value: "plaintext",
         label: t("auth.api_key.paste"),
-        hint: IS_XCLAW_MODE
+        hint: isXClawMode()
           ? "Сохраняет ключ напрямую в конфиг xclaw"
           : "Stores the key directly in OpenClaw config",
       },
       {
         value: "ref",
-        label: IS_XCLAW_MODE ? "Использовать ссылку на секрет" : "Use secret reference",
-        hint: IS_XCLAW_MODE
+        label: isXClawMode() ? "Использовать ссылку на секрет" : "Use secret reference",
+        hint: isXClawMode()
           ? "Использует переменную окружения или внешний провайдер"
           : "Stores a reference to env or configured external secret providers",
       },
@@ -466,7 +466,7 @@ export async function ensureApiKeyFromEnvOrPrompt(params: {
 
   if (envKey && selectedMode === "plaintext") {
     const useExisting = await params.prompter.confirm({
-      message: IS_XCLAW_MODE
+      message: isXClawMode()
         ? `Использовать существующий ${params.envLabel} (${envKey.source}, ${formatApiKeyPreview(envKey.apiKey)})?`
         : `Use existing ${params.envLabel} (${envKey.source}, ${formatApiKeyPreview(envKey.apiKey)})?`,
       initialValue: true,

@@ -1,4 +1,4 @@
-import { IS_XCLAW_MODE } from "../xclaw/mode.js";
+import { isXClawMode } from "../xclaw/mode.js";
 import { colorize, isRich, theme } from "../terminal/theme.js";
 
 const formatKv = (line: string, rich: boolean) => {
@@ -9,7 +9,7 @@ const formatKv = (line: string, rich: boolean) => {
   let key = line.slice(0, idx);
   const value = line.slice(idx + 2);
 
-  if (IS_XCLAW_MODE) {
+  if (isXClawMode()) {
     if (key === "Gateway target") key = "Цель шлюза";
     if (key === "Config") key = "Конфиг";
     if (key === "Source") key = "Источник";
@@ -31,14 +31,14 @@ export function formatHealthCheckFailure(err: unknown, opts: { rich?: boolean } 
   const raw = String(err);
   const message = err instanceof Error ? err.message : raw;
 
-  const translatedRaw = IS_XCLAW_MODE 
+  const translatedRaw = isXClawMode() 
     ? raw.replace("gateway closed", "шлюз закрыт")
          .replace("abnormal closure", "аномальное закрытие")
          .replace("no close reason", "причина не указана")
     : raw;
 
   if (!rich) {
-    return IS_XCLAW_MODE ? `Ошибка проверки здоровья: ${translatedRaw}` : `Health check failed: ${raw}`;
+    return isXClawMode() ? `Ошибка проверки здоровья: ${translatedRaw}` : `Health check failed: ${raw}`;
   }
 
   const lines = message
@@ -53,9 +53,9 @@ export function formatHealthCheckFailure(err: unknown, opts: { rich?: boolean } 
   const detailLines = detailsIdx >= 0 ? lines.slice(detailsIdx) : [];
 
   const summary = summaryLines.length > 0 ? summaryLines.join(" ") : message;
-  const header = colorize(rich, theme.error.bold, IS_XCLAW_MODE ? "Ошибка проверки здоровья" : "Health check failed");
+  const header = colorize(rich, theme.error.bold, isXClawMode() ? "Ошибка проверки здоровья" : "Health check failed");
 
-  const out: string[] = [`${header}: ${IS_XCLAW_MODE ? summary.replace("gateway closed", "шлюз закрыт") : summary}`];
+  const out: string[] = [`${header}: ${isXClawMode() ? summary.replace("gateway closed", "шлюз закрыт") : summary}`];
   for (const line of detailLines) {
     out.push(`  ${formatKv(line, rich)}`);
   }

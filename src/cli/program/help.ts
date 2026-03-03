@@ -2,7 +2,7 @@ import type { Command } from "commander";
 import { formatDocsLink } from "../../terminal/links.js";
 import { isRich, theme } from "../../terminal/theme.js";
 import { escapeRegExp } from "../../utils.js";
-import { IS_XCLAW_MODE } from "../../xclaw/mode.js";
+import { isXClawMode } from "../../xclaw/mode.js";
 import { t } from "../../xclaw/i18n.js";
 import { hasFlag, hasRootVersionAlias } from "../argv.js";
 import { formatCliBannerLine, hasEmittedCliBanner } from "../banner.js";
@@ -51,27 +51,27 @@ export function configureProgramHelp(program: Command, ctx: ProgramContext) {
     .version(ctx.programVersion)
     .option(
       "--dev",
-      IS_XCLAW_MODE
+      isXClawMode()
         ? "Режим разработки: изолированное состояние в ~/.xclaw-dev, порт 19001."
         : "Dev profile: isolate state under ~/.openclaw-dev, default gateway port 19001, and shift derived ports (browser/canvas)",
     )
     .option(
       "--profile <name>",
-      IS_XCLAW_MODE
+      isXClawMode()
         ? "Использовать именованный профиль (изолирует конфиг в ~/.xclaw-<имя>)"
         : "Use a named profile (isolates OPENCLAW_STATE_DIR/OPENCLAW_CONFIG_PATH under ~/.openclaw-<name>)",
     )
     .option(
       "--log-level <level>",
-      IS_XCLAW_MODE
+      isXClawMode()
         ? `Переопределение уровня логирования (${CLI_LOG_LEVEL_VALUES})`
         : `Global log level override for file + console (${CLI_LOG_LEVEL_VALUES})`,
       parseCliLogLevelOption,
     );
 
-  program.option("--no-color", IS_XCLAW_MODE ? "Отключить цвета ANSI" : "Disable ANSI colors", false);
-  program.helpOption("-h, --help", IS_XCLAW_MODE ? "Показать справку" : "Display help for command");
-  program.helpCommand("help [command]", IS_XCLAW_MODE ? "Показать справку по команде" : "Display help for command");
+  program.option("--no-color", isXClawMode() ? "Отключить цвета ANSI" : "Disable ANSI colors", false);
+  program.helpOption("-h, --help", isXClawMode() ? "Показать справку" : "Display help for command");
+  program.helpCommand("help [command]", isXClawMode() ? "Показать справку по команде" : "Display help for command");
 
   program.configureHelp({
     // sort options and subcommands alphabetically

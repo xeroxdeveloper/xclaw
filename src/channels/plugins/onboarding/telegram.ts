@@ -8,7 +8,7 @@ import {
 } from "../../../telegram/accounts.js";
 import { formatDocsLink } from "../../../terminal/links.js";
 import type { WizardPrompter } from "../../../wizard/prompts.js";
-import { IS_XCLAW_MODE } from "../../../xclaw/mode.js";
+import { isXClawMode } from "../../../xclaw/mode.js";
 import { fetchTelegramChatId } from "../../telegram/api.js";
 import type { ChannelOnboardingAdapter, ChannelOnboardingDmPolicy } from "../onboarding-types.js";
 import {
@@ -27,7 +27,7 @@ const channel = "telegram" as const;
 
 async function noteTelegramTokenHelp(prompter: WizardPrompter): Promise<void> {
   await prompter.note(
-    IS_XCLAW_MODE
+    isXClawMode()
       ? [
           "1) Откройте Telegram и напишите @BotFather",
           "2) Запустите /newbot (или /mybots)",
@@ -42,13 +42,13 @@ async function noteTelegramTokenHelp(prompter: WizardPrompter): Promise<void> {
           `Docs: ${formatDocsLink("/telegram")}`,
           "Website: https://openclaw.ai",
         ].join("\n"),
-    IS_XCLAW_MODE ? "Токен Telegram бота" : "Telegram bot token",
+    isXClawMode() ? "Токен Telegram бота" : "Telegram bot token",
   );
 }
 
 async function noteTelegramUserIdHelp(prompter: WizardPrompter): Promise<void> {
   await prompter.note(
-    IS_XCLAW_MODE
+    isXClawMode()
       ? [
           `1) Напишите боту в ЛС, затем найдите from.id в \`${formatCliCommand("xclaw logs --follow")}\` (самый надежный способ)`,
           "2) Или перейдите по ссылке https://api.telegram.org/bot<bot_token>/getUpdates и найдите message.from.id",
@@ -61,7 +61,7 @@ async function noteTelegramUserIdHelp(prompter: WizardPrompter): Promise<void> {
           `Docs: ${formatDocsLink("/telegram")}`,
           "Website: https://openclaw.ai",
         ].join("\n"),
-    IS_XCLAW_MODE ? "Telegram ID пользователя" : "Telegram user id",
+    isXClawMode() ? "Telegram ID пользователя" : "Telegram user id",
   );
 }
 
@@ -88,21 +88,21 @@ async function promptTelegramAllowFrom(params: {
   await noteTelegramUserIdHelp(prompter);
 
   const token = resolved.token;
-  if (!token && !IS_XCLAW_MODE) {
+  if (!token && !isXClawMode()) {
     await prompter.note("Telegram token missing; username lookup is unavailable.", "Telegram");
   }
   const unique = await promptResolvedAllowFrom({
     prompter,
     existing: existingAllowFrom,
     token,
-    message: IS_XCLAW_MODE
+    message: isXClawMode()
       ? "Telegram allowFrom (введите числовой ID отправителя)"
       : "Telegram allowFrom (numeric sender id; @username resolves to id)",
-    placeholder: IS_XCLAW_MODE ? "12345678" : "@username",
-    label: IS_XCLAW_MODE ? "Список разрешенных Telegram ID" : "Telegram allowlist",
+    placeholder: isXClawMode() ? "12345678" : "@username",
+    label: isXClawMode() ? "Список разрешенных Telegram ID" : "Telegram allowlist",
     parseInputs: splitOnboardingEntries,
     parseId: parseTelegramAllowFromId,
-    invalidWithoutTokenNote: IS_XCLAW_MODE
+    invalidWithoutTokenNote: isXClawMode()
       ? "Требуется числовой ID отправителя."
       : "Telegram token missing; use numeric sender ids (usernames require a bot token).",
     resolveEntries: async ({ token: tokenValue, entries }) => {
@@ -116,7 +116,7 @@ async function promptTelegramAllowFrom(params: {
           if (!stripped) {
             return { input: entry, resolved: false, id: null };
           }
-          if (IS_XCLAW_MODE) {
+          if (isXClawMode()) {
             return { input: entry, resolved: false, id: null };
           }
           const username = stripped.startsWith("@") ? stripped : `@${stripped}`;
@@ -135,7 +135,7 @@ async function promptTelegramAllowFrom(params: {
     patch: { 
       dmPolicy: "allowlist", 
       allowFrom: unique,
-      ...(IS_XCLAW_MODE ? { groupPolicy: "open" } : {})
+      ...(isXClawMode() ? { groupPolicy: "open" } : {})
     },
   });
 }
@@ -157,7 +157,7 @@ async function promptTelegramAllowFromForAccount(params: {
 }
 
 const dmPolicy: ChannelOnboardingDmPolicy = {
-  label: IS_XCLAW_MODE ? "Telegram ЛС" : "Telegram",
+  label: isXClawMode() ? "Telegram ЛС" : "Telegram",
   channel,
   policyKey: "channels.telegram.dmPolicy",
   allowFromKey: "channels.telegram.allowFrom",
@@ -181,13 +181,13 @@ export const telegramOnboardingAdapter: ChannelOnboardingAdapter = {
       channel,
       configured,
       statusLines: [
-        `${IS_XCLAW_MODE ? "Telegram" : "Telegram"}: ${configured ? (IS_XCLAW_MODE ? "настроен" : "configured") : IS_XCLAW_MODE ? "нужен токен" : "needs token"}`,
+        `${isXClawMode() ? "Telegram" : "Telegram"}: ${configured ? (isXClawMode() ? "настроен" : "configured") : isXClawMode() ? "нужен токен" : "needs token"}`,
       ],
       selectionHint: configured
-        ? IS_XCLAW_MODE
+        ? isXClawMode()
           ? "рекомендуется · настроен"
           : "recommended · configured"
-        : IS_XCLAW_MODE
+        : isXClawMode()
           ? "рекомендуется · легко настроить"
           : "recommended · newcomer-friendly",
       quickstartScore: configured ? 1 : 10,
@@ -198,7 +198,7 @@ export const telegramOnboardingAdapter: ChannelOnboardingAdapter = {
     const telegramAccountId = await resolveAccountIdForConfigure({
       cfg,
       prompter,
-      label: IS_XCLAW_MODE ? "Telegram" : "Telegram",
+      label: isXClawMode() ? "Telegram" : "Telegram",
       accountOverride: accountOverrides.telegram,
       shouldPromptAccountIds,
       listAccountIds: listTelegramAccountIds,
@@ -229,13 +229,13 @@ export const telegramOnboardingAdapter: ChannelOnboardingAdapter = {
       accountConfigured,
       canUseEnv,
       hasConfigToken,
-      envPrompt: IS_XCLAW_MODE
+      envPrompt: isXClawMode()
         ? "Обнаружен TELEGRAM_BOT_TOKEN. Использовать его?"
         : "TELEGRAM_BOT_TOKEN detected. Use env var?",
-      keepPrompt: IS_XCLAW_MODE
+      keepPrompt: isXClawMode()
         ? "Токен Telegram уже настроен. Оставить его?"
         : "Telegram token already configured. Keep it?",
-      inputPrompt: IS_XCLAW_MODE ? "Введите токен Telegram бота" : "Enter Telegram bot token",
+      inputPrompt: isXClawMode() ? "Введите токен Telegram бота" : "Enter Telegram bot token",
     });
 
     next = applySingleTokenPromptResult({
@@ -246,7 +246,7 @@ export const telegramOnboardingAdapter: ChannelOnboardingAdapter = {
       tokenResult,
     });
 
-    if (IS_XCLAW_MODE) {
+    if (isXClawMode()) {
       next = patchChannelConfigForAccount({
         cfg: next,
         channel: "telegram",

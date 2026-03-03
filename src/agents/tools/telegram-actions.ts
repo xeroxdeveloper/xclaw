@@ -401,5 +401,30 @@ export async function handleTelegramAction(
     });
   }
 
+  if (action === "getChat") {
+    const chatId = readStringOrNumberParam(params, "chatId", { required: true });
+    const token = resolveTelegramToken(cfg, { accountId }).token;
+    if (!token) {
+      throw new Error("Telegram bot token missing.");
+    }
+    const { Bot } = await import("grammy");
+    const bot = new Bot(token);
+    const chat = await bot.api.getChat(chatId ?? "");
+    return jsonResult({ ok: true, chat });
+  }
+
+  if (action === "getChatMember") {
+    const chatId = readStringOrNumberParam(params, "chatId", { required: true });
+    const userId = readNumberParam(params, "userId", { required: true, integer: true });
+    const token = resolveTelegramToken(cfg, { accountId }).token;
+    if (!token) {
+      throw new Error("Telegram bot token missing.");
+    }
+    const { Bot } = await import("grammy");
+    const bot = new Bot(token);
+    const member = await bot.api.getChatMember(chatId ?? "", userId ?? 0);
+    return jsonResult({ ok: true, member });
+  }
+
   throw new Error(`Unsupported Telegram action: ${action}`);
 }

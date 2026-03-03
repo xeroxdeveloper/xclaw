@@ -130,6 +130,18 @@ const XClawSchema = z
     autoSummarize: z.boolean().optional(),
     autoUpdate: z.boolean().optional(),
     groupWhitelist: z.array(z.string()).optional(),
+    autonomous: z
+      .array(
+        z
+          .object({
+            chatId: z.union([z.string(), z.number()]),
+            intervalMs: z.number().int().positive(),
+            lastRunAt: z.number().int().nonnegative().optional(),
+            prompt: z.string().optional(),
+          })
+          .strict(),
+      )
+      .optional(),
   })
   .strict()
   .optional();

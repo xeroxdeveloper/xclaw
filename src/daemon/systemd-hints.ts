@@ -1,4 +1,4 @@
-import { IS_XCLAW_MODE } from "../xclaw/mode.js";
+import { isXClawMode } from "../xclaw/mode.js";
 import { formatCliCommand } from "../cli/command-format.js";
 
 export function isSystemdUnavailableDetail(detail?: string): boolean {
@@ -17,7 +17,7 @@ export function isSystemdUnavailableDetail(detail?: string): boolean {
 
 export function renderSystemdUnavailableHints(options: { wsl?: boolean } = {}): string[] {
   if (options.wsl) {
-    return IS_XCLAW_MODE
+    return isXClawMode()
       ? [
           "В WSL2 должен быть включен systemd: добавьте [boot]\\nsystemd=true в /etc/wsl.conf",
           "Затем выполните: wsl --shutdown (в PowerShell) и перезапустите дистрибутив.",
@@ -29,7 +29,7 @@ export function renderSystemdUnavailableHints(options: { wsl?: boolean } = {}): 
           "Verify: systemctl --user status",
         ];
   }
-  return IS_XCLAW_MODE
+  return isXClawMode()
     ? [
         "Пользовательские службы systemd недоступны; установите/включите systemd или запустите шлюз через ваш менеджер процессов.",
         `Если вы в контейнере, запустите шлюз в интерактивном режиме вместо \`${formatCliCommand("xclaw gateway")}\`.`,

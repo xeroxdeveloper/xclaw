@@ -93,6 +93,10 @@ export const telegramMessageActions: ChannelMessageActionAdapter = {
     if (isEnabled("createForumTopic")) {
       actions.add("topic-create");
     }
+    if (isXClawMode(cfg)) {
+      actions.add("info" as ChannelMessageActionName);
+      actions.add("member" as ChannelMessageActionName);
+    }
     return Array.from(actions);
   },
   supportsButtons: ({ cfg }) => {
@@ -223,6 +227,31 @@ export const telegramMessageActions: ChannelMessageActionAdapter = {
           name,
           iconColor: iconColor ?? undefined,
           iconCustomEmojiId: iconCustomEmojiId ?? undefined,
+          accountId: accountId ?? undefined,
+        },
+        cfg,
+        { mediaLocalRoots },
+      );
+    }
+
+    if (action === "info") {
+      return await handleTelegramAction(
+        {
+          action: "getChat",
+          chatId: readTelegramChatIdParam(params),
+          accountId: accountId ?? undefined,
+        },
+        cfg,
+        { mediaLocalRoots },
+      );
+    }
+
+    if (action === "member") {
+      return await handleTelegramAction(
+        {
+          action: "getChatMember",
+          chatId: readTelegramChatIdParam(params),
+          userId: readNumberParam(params, "userId", { required: true, integer: true }),
           accountId: accountId ?? undefined,
         },
         cfg,

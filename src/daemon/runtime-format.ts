@@ -1,4 +1,4 @@
-import { IS_XCLAW_MODE } from "../xclaw/mode.js";
+import { isXClawMode } from "../xclaw/mode.js";
 import { formatRuntimeStatusWithDetails } from "../infra/runtime-status.js";
 
 export type ServiceRuntimeLike = {
@@ -19,26 +19,26 @@ export function formatRuntimeStatus(runtime: ServiceRuntimeLike | undefined): st
   }
   const details: string[] = [];
   if (runtime.subState) {
-    details.push(`${IS_XCLAW_MODE ? "состояние" : "sub"} ${runtime.subState}`);
+    details.push(`${isXClawMode() ? "состояние" : "sub"} ${runtime.subState}`);
   }
   if (runtime.lastExitStatus !== undefined) {
-    details.push(`${IS_XCLAW_MODE ? "последний выход" : "last exit"} ${runtime.lastExitStatus}`);
+    details.push(`${isXClawMode() ? "последний выход" : "last exit"} ${runtime.lastExitStatus}`);
   }
   if (runtime.lastExitReason) {
-    details.push(`${IS_XCLAW_MODE ? "причина" : "reason"} ${runtime.lastExitReason}`);
+    details.push(`${isXClawMode() ? "причина" : "reason"} ${runtime.lastExitReason}`);
   }
   if (runtime.lastRunResult) {
-    details.push(`${IS_XCLAW_MODE ? "последний результат" : "last run"} ${runtime.lastRunResult}`);
+    details.push(`${isXClawMode() ? "последний результат" : "last run"} ${runtime.lastRunResult}`);
   }
   if (runtime.lastRunTime) {
-    details.push(`${IS_XCLAW_MODE ? "последний запуск" : "last run time"} ${runtime.lastRunTime}`);
+    details.push(`${isXClawMode() ? "последний запуск" : "last run time"} ${runtime.lastRunTime}`);
   }
   if (runtime.detail) {
     details.push(runtime.detail);
   }
   
   let status = runtime.status;
-  if (IS_XCLAW_MODE) {
+  if (isXClawMode()) {
     if (status === "running") status = "запущено";
     if (status === "stopped") status = "остановлено";
     if (status === "error") status = "ошибка";

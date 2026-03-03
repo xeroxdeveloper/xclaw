@@ -136,7 +136,7 @@ async function auditSystemdUnit(
   if (!parsed.after.has("network-online.target")) {
     issues.push({
       code: SERVICE_AUDIT_CODES.systemdAfterNetworkOnline,
-      message: IS_XCLAW_MODE ? "Отсутствует параметр systemd After=network-online.target" : "Missing systemd After=network-online.target",
+      message: isXClawMode() ? "Отсутствует параметр systemd After=network-online.target" : "Missing systemd After=network-online.target",
       detail: unitPath,
       level: "recommended",
     });
@@ -144,7 +144,7 @@ async function auditSystemdUnit(
   if (!parsed.wants.has("network-online.target")) {
     issues.push({
       code: SERVICE_AUDIT_CODES.systemdWantsNetworkOnline,
-      message: IS_XCLAW_MODE ? "Отсутствует параметр systemd Wants=network-online.target" : "Missing systemd Wants=network-online.target",
+      message: isXClawMode() ? "Отсутствует параметр systemd Wants=network-online.target" : "Missing systemd Wants=network-online.target",
       detail: unitPath,
       level: "recommended",
     });
@@ -152,7 +152,7 @@ async function auditSystemdUnit(
   if (!isRestartSecPreferred(parsed.restartSec)) {
     issues.push({
       code: SERVICE_AUDIT_CODES.systemdRestartSec,
-      message: IS_XCLAW_MODE ? "RestartSec не совпадает с рекомендованными 5с" : "RestartSec does not match the recommended 5s",
+      message: isXClawMode() ? "RestartSec не совпадает с рекомендованными 5с" : "RestartSec does not match the recommended 5s",
       detail: unitPath,
       level: "recommended",
     });
@@ -176,7 +176,7 @@ async function auditLaunchdPlist(
   if (!hasRunAtLoad) {
     issues.push({
       code: SERVICE_AUDIT_CODES.launchdRunAtLoad,
-      message: IS_XCLAW_MODE ? "В LaunchAgent отсутствует RunAtLoad=true" : "LaunchAgent is missing RunAtLoad=true",
+      message: isXClawMode() ? "В LaunchAgent отсутствует RunAtLoad=true" : "LaunchAgent is missing RunAtLoad=true",
       detail: plistPath,
       level: "recommended",
     });
@@ -184,7 +184,7 @@ async function auditLaunchdPlist(
   if (!hasKeepAlive) {
     issues.push({
       code: SERVICE_AUDIT_CODES.launchdKeepAlive,
-      message: IS_XCLAW_MODE ? "В LaunchAgent отсутствует KeepAlive=true" : "LaunchAgent is missing KeepAlive=true",
+      message: isXClawMode() ? "В LaunchAgent отсутствует KeepAlive=true" : "LaunchAgent is missing KeepAlive=true",
       detail: plistPath,
       level: "recommended",
     });
@@ -198,7 +198,7 @@ function auditGatewayCommand(programArguments: string[] | undefined, issues: Ser
   if (!hasGatewaySubcommand(programArguments)) {
     issues.push({
       code: SERVICE_AUDIT_CODES.gatewayCommandMissing,
-      message: IS_XCLAW_MODE ? "Команда службы не содержит подкоманду gateway" : "Service command does not include the gateway subcommand",
+      message: isXClawMode() ? "Команда службы не содержит подкоманду gateway" : "Service command does not include the gateway subcommand",
       level: "aggressive",
     });
   }
@@ -219,12 +219,12 @@ function auditGatewayToken(
   }
   issues.push({
     code: SERVICE_AUDIT_CODES.gatewayTokenMismatch,
-    message: IS_XCLAW_MODE
+    message: isXClawMode()
       ? "OPENCLAW_GATEWAY_TOKEN службы не совпадает с токеном из xclaw.json"
       : "Gateway service OPENCLAW_GATEWAY_TOKEN does not match gateway.auth.token in openclaw.json",
     detail: serviceToken 
-      ? (IS_XCLAW_MODE ? "токен службы устарел" : "service token is stale") 
-      : (IS_XCLAW_MODE ? "токен службы отсутствует" : "service token is missing"),
+      ? (isXClawMode() ? "токен службы устарел" : "service token is stale") 
+      : (isXClawMode() ? "токен службы отсутствует" : "service token is missing"),
     level: "recommended",
   });
 }
@@ -255,7 +255,7 @@ function auditGatewayServicePath(
   if (!servicePath) {
     issues.push({
       code: SERVICE_AUDIT_CODES.gatewayPathMissing,
-      message: IS_XCLAW_MODE ? "PATH службы шлюза не установлен; демон должен использовать минимальный PATH." : "Gateway service PATH is not set; the daemon should use a minimal PATH.",
+      message: isXClawMode() ? "PATH службы шлюза не установлен; демон должен использовать минимальный PATH." : "Gateway service PATH is not set; the daemon should use a minimal PATH.",
       level: "recommended",
     });
     return;
@@ -275,7 +275,7 @@ function auditGatewayServicePath(
   if (missing.length > 0) {
     issues.push({
       code: SERVICE_AUDIT_CODES.gatewayPathMissingDirs,
-      message: IS_XCLAW_MODE 
+      message: isXClawMode() 
         ? `В PATH службы шлюза отсутствуют обязательные директории: ${missing.join(", ")}`
         : `Gateway service PATH missing required dirs: ${missing.join(", ")}`,
       level: "recommended",
@@ -304,7 +304,7 @@ function auditGatewayServicePath(
   if (nonMinimal.length > 0) {
     issues.push({
       code: SERVICE_AUDIT_CODES.gatewayPathNonMinimal,
-      message: IS_XCLAW_MODE
+      message: isXClawMode()
         ? "PATH службы шлюза включает менеджеры версий или пакетов; рекомендуется минимальный PATH."
         : "Gateway service PATH includes version managers or package managers; recommend a minimal PATH.",
       detail: nonMinimal.join(", "),
@@ -327,7 +327,7 @@ async function auditGatewayRuntime(
   if (isBunRuntime(execPath)) {
     issues.push({
       code: SERVICE_AUDIT_CODES.gatewayRuntimeBun,
-      message: IS_XCLAW_MODE ? "Служба шлюза использует Bun; Bun несовместим с каналами WhatsApp и Telegram." : "Gateway service uses Bun; Bun is incompatible with WhatsApp + Telegram channels.",
+      message: isXClawMode() ? "Служба шлюза использует Bun; Bun несовместим с каналами WhatsApp и Telegram." : "Gateway service uses Bun; Bun is incompatible with WhatsApp + Telegram channels.",
       detail: execPath,
       level: "recommended",
     });
@@ -341,7 +341,7 @@ async function auditGatewayRuntime(
   if (isVersionManagedNodePath(execPath, platform)) {
     issues.push({
       code: SERVICE_AUDIT_CODES.gatewayRuntimeNodeVersionManager,
-      message: IS_XCLAW_MODE ? "Служба шлюза использует Node из менеджера версий; это может привести к сбоям после обновлений." : "Gateway service uses Node from a version manager; it can break after upgrades.",
+      message: isXClawMode() ? "Служба шлюза использует Node из менеджера версий; это может привести к сбоям после обновлений." : "Gateway service uses Node from a version manager; it can break after upgrades.",
       detail: execPath,
       level: "recommended",
     });
@@ -350,7 +350,7 @@ async function auditGatewayRuntime(
       if (!systemNode) {
         issues.push({
           code: SERVICE_AUDIT_CODES.gatewayRuntimeNodeSystemMissing,
-          message: IS_XCLAW_MODE
+          message: isXClawMode()
             ? "Системный Node 22+ не найден; установите его перед миграцией с менеджеров версий."
             : "System Node 22+ not found; install it before migrating away from version managers.",
           level: "recommended",
@@ -377,13 +377,13 @@ export function checkTokenDrift(params: {
 
   // Drift: config has token, service has different or no token
   if (configToken && serviceToken !== configToken) {
-    const cmd = IS_XCLAW_MODE ? "xclaw" : "openclaw";
+    const cmd = isXClawMode() ? "xclaw" : "openclaw";
     return {
       code: SERVICE_AUDIT_CODES.gatewayTokenDrift,
-      message: IS_XCLAW_MODE 
+      message: isXClawMode() 
         ? "Токен в конфиге отличается от токена службы. Демон будет использовать старый токен после перезапуска."
         : "Config token differs from service token. The daemon will use the old token after restart.",
-      detail: IS_XCLAW_MODE 
+      detail: isXClawMode() 
         ? `Выполните \`${cmd} gateway install --force\` для синхронизации токена.`
         : "Run `openclaw gateway install --force` to sync the token.",
       level: "recommended",

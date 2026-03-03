@@ -9,7 +9,7 @@ import {
   resolveRequiredHomeDir,
 } from "./infra/home-dir.js";
 import { isPlainObject } from "./infra/plain-object.js";
-import { IS_XCLAW_MODE, isXClawMode } from "./xclaw/mode.js";
+import { isXClawMode } from "./xclaw/mode.js";
 
 export async function ensureDir(dir: string) {
   await fs.promises.mkdir(dir, { recursive: true });

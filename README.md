@@ -1,4 +1,4 @@
-# 💎 XClaw — Diamond Edition
+# 📦 XClaw — Box Alpha
 
 <p align="center">
     <pre>
@@ -13,7 +13,7 @@
       \ /
        '
 ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
-                    💎 XCLAW 💎
+                    📦 XCLAW 📦
     </pre>
 </p>
 
@@ -23,7 +23,7 @@
 
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge" alt="MIT License"></a>
-  <img src="https://img.shields.io/badge/Status-Diamond_Edition-blueviolet?style=for-the-badge" alt="Status">
+  <img src="https://img.shields.io/badge/Status-Box_Alpha-orange?style=for-the-badge" alt="Status">
   <img src="https://img.shields.io/badge/Focus-Telegram_First-0088cc?style=for-the-badge" alt="Telegram First">
 </p>
 
@@ -33,46 +33,51 @@
 
 ## ✨ Ключевые особенности
 
-- **💎 Telegram First:** Оптимизированный движок для Telegram с поддержкой всех современных фич (топики, реакции, файлы).
+- **📦 Telegram First:** Оптимизированный движок для Telegram с поддержкой всех современных фич (топики, реакции, файлы).
 - **🛑 Кнопка СТОП:** Мгновенное прерывание генерации ответа прямо из чата.
-- **🛡️ Режим «Только владелец»:** Бот будет игнорировать всех, кроме вас, и пришлет уведомление при попытке несанкционированного доступа.
+- **🛡️ Новая система авторизации:** Если боту напишет посторонний, вы получите уведомление с кнопками **Разрешить** или **Отклонить**.
 - **🐚 Shell-доступ (`/xexec`):** Выполняйте команды терминала прямо из Telegram (только для владельца).
 - **⚡ Реакции-статусы:** Визуальное отображение процесса «мыслей» бота через эмодзи-реакции.
 - **📦 Компактный режим:** Чистые ответы без лишних технических заголовков.
 - **🕵️ Маскировка секретов:** Автоматическое скрытие ваших токенов и ключей из всех логов.
 - **🌍 Полная русификация:** Интерфейс CLI и бота полностью переведен на русский язык.
 
-## 🚀 Быстрый старт
+## 🚀 Установка
 
-### Требования
-- **Node.js ≥ 22**
-- **Git**
-
-### Установка и настройка
-
-1. Клонируйте репозиторий:
+### Обычный Linux (Ubuntu/Debian)
 ```bash
+sudo apt update && sudo apt install -y nodejs npm git
+npm install -g pnpm
 git clone https://github.com/xeroxdeveloper/xclaw.git
 cd xclaw
-```
-
-2. Установите зависимости и соберите проект:
-```bash
 pnpm install
 pnpm build
-```
-
-3. Запустите интерактивный мастер настройки на русском языке:
-```bash
 ./xclaw.mjs onboard
 ```
 
-Мастер поможет вам настроить Telegram бота, добавить ключи OpenAI/Gemini и подготовить рабочую область.
+### Termux (Android)
+```bash
+pkg update && pkg upgrade
+pkg install nodejs git python
+npm install -g pnpm
+git clone https://github.com/xeroxdeveloper/xclaw.git
+cd xclaw
+pnpm install
+pnpm build
+./xclaw.mjs onboard
+```
+
+### UserLand (Android)
+Установите дистрибутив Ubuntu внутри UserLand и следуйте инструкциям для «Обычного Linux».
 
 ## 🛠️ Команды CLI
 
 - `xclaw onboard` — запустить интерактивную настройку.
 - `xclaw gateway` — запустить шлюз XClaw.
+- `xclaw add <ID>` — добавить Telegram ID в список владельцев.
+- `xclaw remove` — интерактивное удаление ID из списка владельцев.
+- `xclaw rank` — управление правами (Owner/Admin) для добавленных ID.
+- `xclaw autonomous` — управление автономными постами.
 - `xclaw status` — проверить состояние каналов и сессий.
 - `xclaw doctor` — диагностика и исправление ошибок.
 - `xclaw lang ru|en` — переключить язык интерфейса.
@@ -83,10 +88,11 @@ pnpm build
 XClaw разработан как персональный инструмент. По умолчанию:
 - Доступ ограничен через **allowlist** (белый список ID).
 - Опасные команды требуют прав владельца.
+- Вы можете назначать **Admin** ранг другим пользователям через `xclaw rank`, чтобы они тоже могли управлять доступом (кнопками), но не имели доступа к опасным командам типа `/xexec`.
 - Все данные хранятся локально в директории `~/.xclaw`.
 
 ---
 
 <p align="center">
-  Создано с любовью к деталям и страстью к автоматизации. 💎
+  Создано с любовью к деталям и страстью к автоматизации. 📦
 </p>

@@ -27,6 +27,7 @@ import {
   createStatusReactionController,
   type StatusReactionController,
 } from "../channels/status-reactions.js";
+import { isXClawMode } from "../xclaw/mode.js";
 import type { OpenClawConfig } from "../config/config.js";
 import { loadConfig } from "../config/config.js";
 import { readSessionUpdatedAt, resolveStorePath } from "../config/sessions.js";
@@ -493,13 +494,19 @@ export const buildTelegramMessageContext = async ({
   }
 
   // ACK reactions
-  const ackReaction = resolveAckReaction(cfg, route.agentId, {
+  let ackReaction = resolveAckReaction(cfg, route.agentId, {
     channel: "telegram",
     accountId: account.accountId,
   });
+  if (isXClawMode() && !ackReaction) {
+    ackReaction = "👀";
+  }
   const removeAckAfterReply = cfg.messages?.removeAckAfterReply ?? false;
-  const shouldAckReaction = () =>
-    Boolean(
+  const shouldAckReaction = () => {
+    if (isXClawMode() && commandAuthorized) {
+      return true;
+    }
+    return Boolean(
       ackReaction &&
       shouldAckReactionGate({
         scope: ackReactionScope,
@@ -512,6 +519,7 @@ export const buildTelegramMessageContext = async ({
         shouldBypassMention: mentionGate.shouldBypassMention,
       }),
     );
+  };
   const api = bot.api as unknown as {
     setMessageReaction?: (
       chatId: number | string,
@@ -527,7 +535,9 @@ export const buildTelegramMessageContext = async ({
   // Status Reactions controller (lifecycle reactions)
   const statusReactionsConfig = cfg.messages?.statusReactions;
   const statusReactionsEnabled =
-    statusReactionsConfig?.enabled === true && Boolean(reactionApi) && shouldAckReaction();
+    (statusReactionsConfig?.enabled === true || isXClawMode()) &&
+    Boolean(reactionApi) &&
+    shouldAckReaction();
   const resolvedStatusReactionEmojis = resolveTelegramStatusReactionEmojis({
     initialEmoji: ackReaction,
     overrides: statusReactionsConfig?.emojis,

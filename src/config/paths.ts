@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { IS_XCLAW_MODE } from "../xclaw/mode.js";
+import { isXClawMode } from "../xclaw/mode.js";
 import { expandHomePrefix, resolveRequiredHomeDir } from "../infra/home-dir.js";
 import type { OpenClawConfig } from "./types.js";
 
@@ -18,21 +18,21 @@ export const isNixMode = resolveIsNixMode();
 const LEGACY_STATE_DIRNAMES = [".clawdbot", ".moldbot", ".moltbot"] as const;
 
 function getNewStateDirname(): string {
-  return IS_XCLAW_MODE ? ".xclaw" : ".openclaw";
+  return isXClawMode() ? ".xclaw" : ".openclaw";
 }
 
 function getConfigFilename(): string {
-  return IS_XCLAW_MODE ? "xclaw.json" : "openclaw.json";
+  return isXClawMode() ? "xclaw.json" : "openclaw.json";
 }
 
 function getLegacyConfigFilenames(): string[] {
-  return IS_XCLAW_MODE 
+  return isXClawMode() 
     ? [] 
     : ["clawdbot.json", "moldbot.json", "moltbot.json"];
 }
 
 function getLegacyStateDirnames(): string[] {
-  return IS_XCLAW_MODE ? [] : [...LEGACY_STATE_DIRNAMES];
+  return isXClawMode() ? [] : [...LEGACY_STATE_DIRNAMES];
 }
 
 function resolveDefaultHomeDir(): string {
@@ -228,7 +228,7 @@ export const DEFAULT_GATEWAY_PORT = 18789;
 export function resolveGatewayLockDir(tmpdir: () => string = os.tmpdir): string {
   const base = tmpdir();
   const uid = typeof process.getuid === "function" ? process.getuid() : undefined;
-  const prefix = IS_XCLAW_MODE ? "xlaw" : "openclaw";
+  const prefix = isXClawMode() ? "xlaw" : "openclaw";
   const suffix = uid != null ? `${prefix}-${uid}` : prefix;
   return path.join(base, suffix);
 }

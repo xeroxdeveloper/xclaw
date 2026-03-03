@@ -86,5 +86,6 @@ export function resolveTelegramNativeCommandAllowlist(
     "xexec",
     "xupdate",
     "ghissue",
+    "whois",
   ]);
 }

@@ -11,7 +11,7 @@ import { isTruthyEnvValue, normalizeEnv, registerSecretForMasking } from "./infr
 import { isMainModule } from "./infra/is-main.js";
 import { installProcessWarningFilter } from "./infra/warning-filter.js";
 import { attachChildProcessBridge } from "./process/child-process-bridge.js";
-import { IS_XCLAW_MODE } from "./xclaw/mode.js";
+import { isXClawMode } from "./xclaw/mode.js";
 
 const ENTRY_WRAPPER_PAIRS = [
   { wrapperBasename: "openclaw.mjs", entryBasename: "entry.js" },
@@ -39,7 +39,7 @@ if (
 ) {
   // Imported as a dependency
 } else {
-  const CLI_TITLE = IS_XCLAW_MODE ? "xclaw" : "openclaw";
+  const CLI_TITLE = isXClawMode() ? "xclaw" : "openclaw";
   process.title = CLI_TITLE;
   
   if (process.env.TELEGRAM_BOT_TOKEN) {

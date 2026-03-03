@@ -1,38 +1,38 @@
-import { IS_XCLAW_MODE } from "../xclaw/mode.js";
+import { isXClawMode } from "../xclaw/mode.js";
 
-const DEFAULT_TAGLINE = IS_XCLAW_MODE
+const DEFAULT_TAGLINE = isXClawMode()
   ? "Ваши чаты — чистая огранка, блестящий результат."
   : "Your chats, diamond-cut and brilliant.";
 
 const HOLIDAY_TAGLINES = {
-  newYear: IS_XCLAW_MODE
+  newYear: isXClawMode()
     ? "Новый год: Новый год, новый конфиг — тот же старый EADDRINUSE, но теперь мы решаем это стильно."
     : "New Year's Day: New year, new config—same old EADDRINUSE, but this time we resolve it with style.",
-  lunarNewYear: IS_XCLAW_MODE
+  lunarNewYear: isXClawMode()
     ? "Лунный Новый год: Пусть ваши сборки будут удачными, ветки — процветающими, а конфликты слияния исчезают как по волшебству."
     : "Lunar New Year: May your builds be lucky, your branches prosperous, and your merge conflicts disappear like magic.",
-  christmas: IS_XCLAW_MODE
-    ? "Рождество: Хо-хо-хо — ваш бриллиантовый помощник здесь, чтобы дарить радость и надежно прятать ключи."
+  christmas: isXClawMode()
+    ? "Рождество: Хо-хо-хо — ваш боксовый помощник здесь, чтобы дарить радость и надежно прятать ключи."
     : "Christmas: Ho ho ho—your diamond assistant is here to ship joy and stash the keys safely.",
-  eid: IS_XCLAW_MODE
+  eid: isXClawMode()
     ? "Ураза-байрам: Режим празднования: очереди очищены, задачи выполнены, хорошее настроение закомичено в main."
     : "Eid al-Fitr: Celebration mode: queues cleared, tasks completed, and good vibes committed to main.",
-  diwali: IS_XCLAW_MODE
+  diwali: isXClawMode()
     ? "Дивали: Пусть логи сверкают, а баги бегут — сегодня мы зажигаем терминал и шипим с гордостью."
     : "Diwali: Let the logs sparkle and the bugs flee—today we light up the terminal and ship with pride.",
-  easter: IS_XCLAW_MODE
+  easter: isXClawMode()
     ? "Пасха: Я нашел вашу потерянную переменную окружения — считайте это маленькой охотой за сокровищами."
     : "Easter: I found your missing environment variable—consider it a tiny treasure hunt.",
-  hanukkah: IS_XCLAW_MODE
+  hanukkah: isXClawMode()
     ? "Ханука: Восемь ночей, восемь попыток, ноль стыда — пусть ваш шлюз горит ярко, а деплои будут мирными."
     : "Hanukkah: Eight nights, eight retries, zero shame—may your gateway stay lit and your deployments peaceful.",
-  halloween: IS_XCLAW_MODE
+  halloween: isXClawMode()
     ? "Хэллоуин: Жуткий сезон: берегитесь проклятых зависимостей и призраков прошлых node_modules."
     : "Halloween: Spooky season: beware haunted dependencies and the ghost of node_modules past.",
-  thanksgiving: IS_XCLAW_MODE
+  thanksgiving: isXClawMode()
     ? "День благодарения: Благодарен за стабильные порты, рабочий DNS и бота, который действительно читает логи."
     : "Thanksgiving: Grateful for stable ports, working DNS, and a bot that actually reads the logs.",
-  valentines: IS_XCLAW_MODE
+  valentines: isXClawMode()
     ? "День святого Валентина: Розы напечатаны, фиалки перенаправлены — я автоматизирую рутину, чтобы вы могли отдохнуть."
     : "Valentine's Day: Roses are typed, violets are piped—I'll automate the chores so you can relax.",
 } as const;
@@ -81,7 +81,7 @@ const EN_TAGLINES: string[] = [
   "Because texting yourself reminders is so last season.",
   "Your inbox, your infra, your brilliance.",
   'Turning "I\'ll reply later" into "replied with diamond precision".',
-  "The only gem in your contacts you actually need. 💎",
+  "The only gem in your contacts you actually need. 📦",
   "Chat automation for people who appreciate the finer details.",
   "Because Siri wasn't answering at 3AM.",
   "IPC, but it's your phone.",
@@ -104,7 +104,7 @@ const EN_TAGLINES: string[] = [
   "We ship features faster than light reflects off a gem.",
   "Your AI assistant, now in high definition.",
   "Think different. Actually shine.",
-  "Ah, the diamond standard! 💎",
+  "Ah, the diamond standard! 📦",
   "Greetings, Professor Falken",
 ];
 
@@ -112,11 +112,11 @@ const RU_TAGLINES: string[] = [
   "Ваш терминал нашел свой драгоценный камень — напечатайте что-нибудь, и пусть бот засияет.",
   "Добро пожаловать в командную строку: где мечты компилируются, а совершенство сияет.",
   "Я работаю на кофеине, точности и дерзости фразы «на моей машине всё работало».",
-  "Шлюз в сети — блестящая производительность, алмазная стабильность.",
+  "Шлюз в сети — блестящая производительность, боксная стабильность.",
   "Я свободно владею bash, легким сарказмом и высокоточным интеллектом.",
   "Один CLI, чтобы править всеми, отполированный до совершенства.",
   "Если это работает — это автоматизация; если ломается — это «момент огранки».",
-  "Безопасность вечна — как бриллиант. Требуются коды сопряжения.",
+  "Безопасность вечна — как бокс. Требуются коды сопряжения.",
   "Ваш .env виден всем; не волнуйтесь, я спрячу его и сохраню в безопасности.",
   "Я сделаю скучную работу, пока вы любуетесь чистотой логов.",
   "Я не говорю, что ваш рабочий процесс хаотичен... я просто приношу огранку и полировку.",
@@ -127,7 +127,7 @@ const RU_TAGLINES: string[] = [
   "Я — тот ассистент, которого заслуживал ваш терминал: острый, ясный и готовый.",
   "Я храню секреты как сейф... зашифровано, приватно и надежно.",
   "Автоматизация с точностью: минимум суеты, максимум блеска.",
-  "Я — практически швейцарский армейский нож, но из углеволокна и алмазов.",
+  "Я — практически швейцарский армейский нож, но из углеволокна и боксов.",
   "Если потерялись — запустите doctor; если смелы — запускайте prod; если мудры — тесты.",
   "Ваша задача в очереди; ваша гениальность обрабатывается.",
   "Я не могу исправить ваш вкус в коде, но могу заставить вашу сборку сиять.",
@@ -139,7 +139,7 @@ const RU_TAGLINES: string[] = [
   "Я превращу вашу рутину в произведение искусства.",
   "Скажите «стоп», и я остановлюсь; скажите «шипим», и мы оба отпразднуем.",
   "Я — причина, по которой история вашей оболочки выглядит как шедевр.",
-  "Я как бриллиант: меня трудно сломать, и со мной приятно работать.",
+  "Я как бокс: меня трудно сломать, и со мной приятно работать.",
   "Я могу работать локально, удаленно или чисто на вайбах — результат всегда ясен.",
   "Если вы можете это описать, я, вероятно, смогу это автоматизировать — блестяще.",
   "Ваш конфиг валиден, ваш потенциал безграничен.",
@@ -151,8 +151,8 @@ const RU_TAGLINES: string[] = [
   "Если это повторяется — я автоматизирую; если это сложно — я сделаю это ясным.",
   "Потому что писать напоминания самому себе — это прошлый век.",
   "Ваш инбокс, ваша инфра, ваш блеск.",
-  "Превращаю «я отвечу позже» в «ответил с алмазной точностью».",
-  "Единственный драгоценный камень в ваших контактах, который вам действительно нужен. 💎",
+  "Превращаю «я отвечу позже» в «ответил с боксной точностью».",
+  "Единственный драгоценный камень в ваших контактах, который вам действительно нужен. 📦",
   "Автоматизация чатов для людей, которые ценят детали.",
   "Потому что Siri не отвечала в 3 часа ночи.",
   "IPC, но в вашем телефоне.",
@@ -161,7 +161,7 @@ const RU_TAGLINES: string[] = [
   "Меньше посредников, больше ясности.",
   "Шипи быстро, сияй ярко.",
   "Сквозное шифрование включено, драма исключена.",
-  "Единственный бот, который уважает вашу приватность как алмазное хранилище.",
+  "Единственный бот, который уважает вашу приватность как боксное хранилище.",
   "Автоматизация WhatsApp без лишнего шума.",
   "API чатов, которые действительно имеют смысл.",
   "Блестящее исполнение, быстрее остальных.",
@@ -175,11 +175,11 @@ const RU_TAGLINES: string[] = [
   "Мы выпускаем фичи быстрее, чем свет отражается от грани.",
   "Ваш AI-ассистент, теперь в высоком разрешении.",
   "Думай иначе. Сияй по-настоящему.",
-  "О, это же алмазный стандарт! 💎",
+  "О, это же боксный стандарт! 📦",
   "Приветствую, профессор Фалкен",
 ];
 
-const TAGLINES = IS_XCLAW_MODE ? RU_TAGLINES : EN_TAGLINES;
+const TAGLINES = isXClawMode() ? RU_TAGLINES : EN_TAGLINES;
 
 type HolidayRule = (date: Date) => boolean;
 
