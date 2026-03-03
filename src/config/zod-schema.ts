@@ -130,6 +130,7 @@ const XClawSchema = z
     autoSummarize: z.boolean().optional(),
     autoUpdate: z.boolean().optional(),
     groupWhitelist: z.array(z.string()).optional(),
+    ranks: z.record(z.string(), z.string()).optional(),
     autonomous: z
       .array(
         z
