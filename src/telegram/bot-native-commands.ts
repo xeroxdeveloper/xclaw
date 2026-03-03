@@ -1,63 +1,45 @@
-import { IS_XCLAW_MODE, isXClawMode, resolveOnlyChannelsFromEnv, resolveOnlyModelProvidersFromEnv, resolveTelegramNativeCommandAllowlist, resolveTelegramOwnerIds } from "../xclaw/mode.js";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import type { Bot, Context } from "grammy";
-import type { ReactionTypeEmoji } from "@grammyjs/types";
-import { resolveChunkMode, type ChunkMode } from "../auto-reply/chunk.js";
-import type { CommandArgs } from "../auto-reply/commands-registry.js";
+import type { Bot } from "grammy";
 import {
   buildCommandTextFromArgs,
-  findCommandByNativeName,
-  listNativeCommandSpecs,
   listNativeCommandSpecsForConfig,
   parseCommandArgs,
-  resolveCommandArgMenu,
 } from "../auto-reply/commands-registry.js";
 import { finalizeInboundContext } from "../auto-reply/reply/inbound-context.js";
 import { dispatchReplyWithBufferedBlockDispatcher } from "../auto-reply/reply/provider-dispatcher.js";
-import { listSkillCommandsForAgents } from "../auto-reply/skill-commands.js";
 import { resolveCommandAuthorizedFromAuthorizers } from "../channels/command-gating.js";
-import { createReplyPrefixOptions } from "../channels/reply-prefix.js";
 import type { OpenClawConfig } from "../config/config.js";
 import type { ChannelGroupPolicy } from "../config/group-policy.js";
-import { resolveMarkdownTableMode } from "../config/markdown-tables.js";
-import { recordSessionMetaFromInbound, resolveStorePath } from "../config/sessions.js";
 import {
   normalizeTelegramCommandName,
-  resolveTelegramCustomCommands,
-  TELEGRAM_COMMAND_NAME_PATTERN,
 } from "../config/telegram-custom-commands.js";
 import type {
-  ReplyToMode,
   TelegramAccountConfig,
   TelegramGroupConfig,
   TelegramTopicConfig,
+  TelegramDirectConfig,
 } from "../config/types.js";
-import { danger, logVerbose } from "../globals.js";
-import { theme } from "../terminal/theme.js";
-import { withProgress } from "../cli/progress.js";
-import { formatCliCommand } from "../cli/command-format.js";
+import type { MarkdownTableMode } from "../config/types.base.js";
+import { logVerbose } from "../globals.js";
 import {
   resolveCommandRuntimeContext,
-  resolveTelegramThreadSpec,
-  buildSenderName,
   resolveTelegramForumThreadId,
   buildTelegramGroupPeerId,
   buildTelegramParentPeer,
   resolveTelegramGroupAllowFromContext,
-  type TelegramThreadSpec,
+  buildSyntheticContext,
 } from "./bot/helpers.js";
 import type { TelegramNativeCommandContext } from "./bot/types.js";
 import {
   evaluateTelegramGroupBaseAccess,
-  evaluateTelegramGroupPolicyAccess,
 } from "./group-access.js";
-import { resolveTelegramGroupPromptSettings } from "./group-config-helpers.js";
-import { buildInlineKeyboard } from "./send.js";
+import { IS_XCLAW_MODE, isXClawMode, resolveTelegramNativeCommandAllowlist, resolveTelegramOwnerIds } from "../xclaw/mode.js";
 import { withTelegramApiErrorLogging } from "./api-logging.js";
 import { deliverReplies } from "./bot/delivery.replies.js";
 import { normalizeDmAllowFromWithStore, isSenderAllowed } from "./bot-access.js";
-import type { MarkdownTableMode } from "../config/types.base.js";
+import type { TelegramThreadSpec } from "./bot/helpers.js";
+import type { ChunkMode } from "../auto-reply/chunk.js";
 import { RegisterTelegramHandlerParams } from "./bot-native-commands.js";
 
 type TelegramCommandAuthResult = {
@@ -97,6 +79,16 @@ function isTelegramOwner(senderId: string, cfg: OpenClawConfig): boolean {
   if (cfg.xclaw?.ranks?.[normalizedSenderId] === "owner") return true;
   if (cfg.xclaw?.ranks?.[`tg:${normalizedSenderId}`] === "owner") return true;
 
+  return false;
+}
+
+function isTelegramAdmin(senderId: string, cfg: OpenClawConfig): boolean {
+  const normalizedSenderId = senderId.trim();
+  if (isTelegramOwner(senderId, cfg)) return true;
+  
+  if (cfg.xclaw?.ranks?.[normalizedSenderId] === "admin") return true;
+  if (cfg.xclaw?.ranks?.[`tg:${normalizedSenderId}`] === "admin") return true;
+  
   return false;
 }
 
@@ -235,7 +227,7 @@ export const registerTelegramNativeCommands = ({
   resolveTelegramGroupConfig,
   shouldSkipUpdate,
   skillCommands,
-}: RegisterTelegramNativeCommandsParams) => {
+}: RegisterTelegramHandlerParams) => {
   const nativeEnabled = telegramCfg.commands?.native !== false;
   const nativeCommandsRaw = nativeEnabled
     ? listNativeCommandSpecsForConfig(cfg, {

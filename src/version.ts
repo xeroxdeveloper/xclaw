@@ -82,7 +82,7 @@ export function resolveBinaryVersion(params: {
     resolveVersionFromModuleUrl(params.moduleUrl) ||
     firstNonEmpty(params.bundledVersion) ||
     params.fallback ||
-    "0.0.0"
+    "1.0.0-alpha"
   );
 }
 

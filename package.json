@@ -1,6 +1,6 @@
 {
   "name": "xclaw",
-  "version": "2026.3.2",
+  "version": "1.0.0-alpha",
   "description": "Telegram-first AI gateway fork focused on lean channel support",
   "keywords": [],
   "homepage": "https://github.com/xeroxdeveloper/xclaw#readme",
