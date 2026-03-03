@@ -1,5 +1,6 @@
 import { DEFAULT_CONTEXT_TOKENS } from "../agents/defaults.js";
 import { normalizeProviderId, parseModelRef } from "../agents/model-selection.js";
+import { IS_XCLAW_MODE } from "../xclaw/mode.js";
 import { DEFAULT_AGENT_MAX_CONCURRENT, DEFAULT_SUBAGENT_MAX_CONCURRENT } from "./agent-limits.js";
 import { resolveAgentModelPrimaryValue } from "./model-input.js";
 import {
@@ -528,6 +529,46 @@ export function applyCompactionDefaults(cfg: OpenClawConfig): OpenClawConfig {
         },
       },
     },
+  };
+}
+
+export function applyXClawDefaults(cfg: OpenClawConfig): OpenClawConfig {
+  if (!IS_XCLAW_MODE) {
+    return cfg;
+  }
+  
+  const xclaw = cfg.xclaw ?? {};
+  let mutated = false;
+  
+  const nextXClaw = { ...xclaw };
+  
+  if (nextXClaw.lang === undefined) {
+    nextXClaw.lang = "ru";
+    mutated = true;
+  }
+  
+  if (nextXClaw.compactMode === undefined) {
+    nextXClaw.compactMode = true;
+    mutated = true;
+  }
+
+  if (nextXClaw.loadingIndicator === undefined) {
+    nextXClaw.loadingIndicator = true;
+    mutated = true;
+  }
+
+  if (nextXClaw.reactionStatuses === undefined) {
+    nextXClaw.reactionStatuses = true;
+    mutated = true;
+  }
+
+  if (!mutated) {
+    return cfg;
+  }
+
+  return {
+    ...cfg,
+    xclaw: nextXClaw,
   };
 }
 

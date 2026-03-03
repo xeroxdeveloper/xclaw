@@ -1,3 +1,4 @@
+import { isXClawMode } from "../xclaw/mode.js";
 import { formatCliCommand } from "../cli/command-format.js";
 import { withProgress } from "../cli/progress.js";
 import { loadConfig, resolveGatewayPort } from "../config/config.js";
@@ -213,9 +214,10 @@ export async function statusCommand(
   const ok = (value: string) => (rich ? theme.success(value) : value);
   const warn = (value: string) => (rich ? theme.warn(value) : value);
 
+  const IS_XCLAW = isXClawMode();
   if (opts.verbose) {
     const details = buildGatewayConnectionDetails();
-    runtime.log(info("Gateway connection:"));
+    runtime.log(info(IS_XCLAW ? "Подключение к шлюзу:" : "Gateway connection:"));
     for (const line of details.message.split("\n")) {
       runtime.log(`  ${line}`);
     }
@@ -391,48 +393,81 @@ export async function statusCommand(
   const channelLabel = channelInfo.label;
   const gitLabel = formatGitInstallLabel(update);
 
-  const overviewRows = [
-    { Item: "Dashboard", Value: dashboard },
-    { Item: "OS", Value: `${osSummary.label} · node ${process.versions.node}` },
-    {
-      Item: "Tailscale",
-      Value:
-        tailscaleMode === "off"
-          ? muted("off")
-          : tailscaleDns && tailscaleHttpsUrl
-            ? `${tailscaleMode} · ${tailscaleDns} · ${tailscaleHttpsUrl}`
-            : warn(`${tailscaleMode} · magicdns unknown`),
-    },
-    { Item: "Channel", Value: channelLabel },
-    ...(gitLabel ? [{ Item: "Git", Value: gitLabel }] : []),
-    {
-      Item: "Update",
-      Value: updateAvailability.available ? warn(`available · ${updateLine}`) : updateLine,
-    },
-    { Item: "Gateway", Value: gatewayValue },
-    { Item: "Gateway service", Value: daemonValue },
-    { Item: "Node service", Value: nodeDaemonValue },
-    { Item: "Agents", Value: agentsValue },
-    { Item: "Memory", Value: memoryValue },
-    { Item: "Probes", Value: probesValue },
-    { Item: "Events", Value: eventsValue },
-    { Item: "Heartbeat", Value: heartbeatValue },
-    ...(lastHeartbeatValue ? [{ Item: "Last heartbeat", Value: lastHeartbeatValue }] : []),
-    {
-      Item: "Sessions",
-      Value: `${summary.sessions.count} active · default ${defaults.model ?? "unknown"}${defaultCtx} · ${storeLabel}`,
-    },
-  ];
+  const overviewRows = IS_XCLAW 
+    ? [
+        { Item: "Панель", Value: dashboard },
+        { Item: "ОС", Value: `${osSummary.label} · node ${process.versions.node}` },
+        {
+          Item: "Tailscale",
+          Value:
+            tailscaleMode === "off"
+              ? muted("выкл")
+              : tailscaleDns && tailscaleHttpsUrl
+                ? `${tailscaleMode} · ${tailscaleDns} · ${tailscaleHttpsUrl}`
+                : warn(`${tailscaleMode} · magicdns неизвестен`),
+        },
+        { Item: "Канал", Value: channelLabel },
+        ...(gitLabel ? [{ Item: "Git", Value: gitLabel }] : []),
+        {
+          Item: "Обновление",
+          Value: updateAvailability.available ? warn(`доступно · ${updateLine}`) : updateLine,
+        },
+        { Item: "Шлюз", Value: gatewayValue },
+        { Item: "Служба шлюза", Value: daemonValue },
+        { Item: "Служба Node", Value: nodeDaemonValue },
+        { Item: "Агенты", Value: agentsValue },
+        { Item: "Память", Value: memoryValue },
+        { Item: "Проверки", Value: probesValue },
+        { Item: "События", Value: eventsValue },
+        { Item: "Heartbeat", Value: heartbeatValue },
+        ...(lastHeartbeatValue ? [{ Item: "Последний пульс", Value: lastHeartbeatValue }] : []),
+        {
+          Item: "Сессии",
+          Value: `${summary.sessions.count} активных · дефолт ${defaults.model ?? "неизвестно"}${defaultCtx} · ${storeLabel}`,
+        },
+      ]
+    : [
+        { Item: "Dashboard", Value: dashboard },
+        { Item: "OS", Value: `${osSummary.label} · node ${process.versions.node}` },
+        {
+          Item: "Tailscale",
+          Value:
+            tailscaleMode === "off"
+              ? muted("off")
+              : tailscaleDns && tailscaleHttpsUrl
+                ? `${tailscaleMode} · ${tailscaleDns} · ${tailscaleHttpsUrl}`
+                : warn(`${tailscaleMode} · magicdns unknown`),
+        },
+        { Item: "Channel", Value: channelLabel },
+        ...(gitLabel ? [{ Item: "Git", Value: gitLabel }] : []),
+        {
+          Item: "Update",
+          Value: updateAvailability.available ? warn(`available · ${updateLine}`) : updateLine,
+        },
+        { Item: "Gateway", Value: gatewayValue },
+        { Item: "Gateway service", Value: daemonValue },
+        { Item: "Node service", Value: nodeDaemonValue },
+        { Item: "Agents", Value: agentsValue },
+        { Item: "Memory", Value: memoryValue },
+        { Item: "Probes", Value: probesValue },
+        { Item: "Events", Value: eventsValue },
+        { Item: "Heartbeat", Value: heartbeatValue },
+        ...(lastHeartbeatValue ? [{ Item: "Last heartbeat", Value: lastHeartbeatValue }] : []),
+        {
+          Item: "Sessions",
+          Value: `${summary.sessions.count} active · default ${defaults.model ?? "unknown"}${defaultCtx} · ${storeLabel}`,
+        },
+      ];
 
-  runtime.log(theme.heading("OpenClaw status"));
+  runtime.log(theme.heading(IS_XCLAW ? "Статус XClaw" : "OpenClaw status"));
   runtime.log("");
-  runtime.log(theme.heading("Overview"));
+  runtime.log(theme.heading(IS_XCLAW ? "Обзор" : "Overview"));
   runtime.log(
     renderTable({
       width: tableWidth,
       columns: [
-        { key: "Item", header: "Item", minWidth: 12 },
-        { key: "Value", header: "Value", flex: true, minWidth: 32 },
+        { key: "Item", header: IS_XCLAW ? "Параметр" : "Item", minWidth: 12 },
+        { key: "Value", header: IS_XCLAW ? "Значение" : "Value", flex: true, minWidth: 32 },
       ],
       rows: overviewRows,
     }).trimEnd(),
@@ -440,41 +475,43 @@ export async function statusCommand(
 
   if (pairingRecovery) {
     runtime.log("");
-    runtime.log(theme.warn("Gateway pairing approval required."));
+    runtime.log(theme.warn(IS_XCLAW ? "Требуется одобрение сопряжения шлюза." : "Gateway pairing approval required."));
     if (pairingRecovery.requestId) {
       runtime.log(
         theme.muted(
-          `Recovery: ${formatCliCommand(`openclaw devices approve ${pairingRecovery.requestId}`)}`,
+          IS_XCLAW 
+            ? `Одобрение: ${formatCliCommand(`xclaw devices approve ${pairingRecovery.requestId}`)}`
+            : `Recovery: ${formatCliCommand(`openclaw devices approve ${pairingRecovery.requestId}`)}`,
         ),
       );
     }
-    runtime.log(theme.muted(`Fallback: ${formatCliCommand("openclaw devices approve --latest")}`));
-    runtime.log(theme.muted(`Inspect: ${formatCliCommand("openclaw devices list")}`));
+    runtime.log(theme.muted(IS_XCLAW ? `Резерв: ${formatCliCommand("xclaw devices approve --latest")}` : `Fallback: ${formatCliCommand("openclaw devices approve --latest")}`));
+    runtime.log(theme.muted(IS_XCLAW ? `Проверка: ${formatCliCommand("xclaw devices list")}` : `Inspect: ${formatCliCommand("openclaw devices list")}`));
   }
 
   runtime.log("");
-  runtime.log(theme.heading("Security audit"));
+  runtime.log(theme.heading(IS_XCLAW ? "Аудит безопасности" : "Security audit"));
   const fmtSummary = (value: { critical: number; warn: number; info: number }) => {
     const parts = [
-      theme.error(`${value.critical} critical`),
-      theme.warn(`${value.warn} warn`),
-      theme.muted(`${value.info} info`),
+      theme.error(`${value.critical} ${IS_XCLAW ? "критично" : "critical"}`),
+      theme.warn(`${value.warn} ${IS_XCLAW ? "предупреждение" : "warn"}`),
+      theme.muted(`${value.info} ${IS_XCLAW ? "инфо" : "info"}`),
     ];
     return parts.join(" · ");
   };
-  runtime.log(theme.muted(`Summary: ${fmtSummary(securityAudit.summary)}`));
+  runtime.log(theme.muted(`${IS_XCLAW ? "Итог" : "Summary"}: ${fmtSummary(securityAudit.summary)}`));
   const importantFindings = securityAudit.findings.filter(
     (f) => f.severity === "critical" || f.severity === "warn",
   );
   if (importantFindings.length === 0) {
-    runtime.log(theme.muted("No critical or warn findings detected."));
+    runtime.log(theme.muted(IS_XCLAW ? "Критических проблем не обнаружено." : "No critical or warn findings detected."));
   } else {
     const severityLabel = (sev: "critical" | "warn" | "info") => {
       if (sev === "critical") {
-        return theme.error("CRITICAL");
+        return theme.error(IS_XCLAW ? "КРИТИЧНО" : "CRITICAL");
       }
       if (sev === "warn") {
-        return theme.warn("WARN");
+        return theme.warn(IS_XCLAW ? "ВНИМАНИЕ" : "WARN");
       }
       return theme.muted("INFO");
     };
@@ -488,18 +525,18 @@ export async function statusCommand(
       runtime.log(`  ${severityLabel(f.severity)} ${f.title}`);
       runtime.log(`    ${shortenText(f.detail.replaceAll("\n", " "), 160)}`);
       if (f.remediation?.trim()) {
-        runtime.log(`    ${theme.muted(`Fix: ${f.remediation.trim()}`)}`);
+        runtime.log(`    ${theme.muted(`${IS_XCLAW ? "Исправление" : "Fix"}: ${f.remediation.trim()}`)}`);
       }
     }
     if (sorted.length > shown.length) {
-      runtime.log(theme.muted(`… +${sorted.length - shown.length} more`));
+      runtime.log(theme.muted(`… +${sorted.length - shown.length} ${IS_XCLAW ? "еще" : "more"}`));
     }
   }
-  runtime.log(theme.muted(`Full report: ${formatCliCommand("openclaw security audit")}`));
-  runtime.log(theme.muted(`Deep probe: ${formatCliCommand("openclaw security audit --deep")}`));
+  runtime.log(theme.muted(`${IS_XCLAW ? "Полный отчет" : "Full report"}: ${formatCliCommand(IS_XCLAW ? "xclaw security audit" : "openclaw security audit")}`));
+  runtime.log(theme.muted(`${IS_XCLAW ? "Глубокая проверка" : "Deep probe"}: ${formatCliCommand(IS_XCLAW ? "xclaw security audit --deep" : "openclaw security audit --deep")}`));
 
   runtime.log("");
-  runtime.log(theme.heading("Channels"));
+  runtime.log(theme.heading(IS_XCLAW ? "Каналы" : "Channels"));
   const channelIssuesByChannel = (() => {
     const map = new Map<string, typeof channelIssues>();
     for (const issue of channelIssues) {
@@ -517,17 +554,17 @@ export async function statusCommand(
     renderTable({
       width: tableWidth,
       columns: [
-        { key: "Channel", header: "Channel", minWidth: 10 },
-        { key: "Enabled", header: "Enabled", minWidth: 7 },
-        { key: "State", header: "State", minWidth: 8 },
-        { key: "Detail", header: "Detail", flex: true, minWidth: 24 },
+        { key: "Channel", header: IS_XCLAW ? "Канал" : "Channel", minWidth: 10 },
+        { key: "Enabled", header: IS_XCLAW ? "Вкл" : "Enabled", minWidth: 7 },
+        { key: "State", header: IS_XCLAW ? "Статус" : "State", minWidth: 8 },
+        { key: "Detail", header: IS_XCLAW ? "Детали" : "Detail", flex: true, minWidth: 24 },
       ],
       rows: channels.rows.map((row) => {
         const issues = channelIssuesByChannel.get(row.id) ?? [];
         const effectiveState = row.state === "off" ? "off" : issues.length > 0 ? "warn" : row.state;
         const issueSuffix =
           issues.length > 0
-            ? ` · ${warn(`gateway: ${shortenText(issues[0]?.message ?? "issue", 84)}`)}`
+            ? ` · ${warn(`${IS_XCLAW ? "шлюз" : "gateway"}: ${shortenText(issues[0]?.message ?? "issue", 84)}`)}`
             : "";
         return {
           Channel: row.label,
@@ -547,29 +584,29 @@ export async function statusCommand(
   );
 
   runtime.log("");
-  runtime.log(theme.heading("Sessions"));
+  runtime.log(theme.heading(IS_XCLAW ? "Сессии" : "Sessions"));
   runtime.log(
     renderTable({
       width: tableWidth,
       columns: [
-        { key: "Key", header: "Key", minWidth: 20, flex: true },
-        { key: "Kind", header: "Kind", minWidth: 6 },
-        { key: "Age", header: "Age", minWidth: 9 },
-        { key: "Model", header: "Model", minWidth: 14 },
-        { key: "Tokens", header: "Tokens", minWidth: 16 },
+        { key: "Key", header: IS_XCLAW ? "Ключ" : "Key", minWidth: 20, flex: true },
+        { key: "Kind", header: IS_XCLAW ? "Тип" : "Kind", minWidth: 6 },
+        { key: "Age", header: IS_XCLAW ? "Давность" : "Age", minWidth: 9 },
+        { key: "Model", header: IS_XCLAW ? "Модель" : "Model", minWidth: 14 },
+        { key: "Tokens", header: IS_XCLAW ? "Токены" : "Tokens", minWidth: 16 },
       ],
       rows:
         summary.sessions.recent.length > 0
           ? summary.sessions.recent.map((sess) => ({
               Key: shortenText(sess.key, 32),
               Kind: sess.kind,
-              Age: sess.updatedAt ? formatTimeAgo(sess.age) : "no activity",
+              Age: sess.updatedAt ? formatTimeAgo(sess.age) : (IS_XCLAW ? "нет активности" : "no activity"),
               Model: sess.model ?? "unknown",
               Tokens: formatTokensCompact(sess),
             }))
           : [
               {
-                Key: muted("no sessions yet"),
+                Key: muted(IS_XCLAW ? "сессий пока нет" : "no sessions yet"),
                 Kind: "",
                 Age: "",
                 Model: "",
@@ -581,27 +618,27 @@ export async function statusCommand(
 
   if (summary.queuedSystemEvents.length > 0) {
     runtime.log("");
-    runtime.log(theme.heading("System events"));
+    runtime.log(theme.heading(IS_XCLAW ? "Системные события" : "System events"));
     runtime.log(
       renderTable({
         width: tableWidth,
-        columns: [{ key: "Event", header: "Event", flex: true, minWidth: 24 }],
+        columns: [{ key: "Event", header: IS_XCLAW ? "Событие" : "Event", flex: true, minWidth: 24 }],
         rows: summary.queuedSystemEvents.slice(0, 5).map((event) => ({
           Event: event,
         })),
       }).trimEnd(),
     );
     if (summary.queuedSystemEvents.length > 5) {
-      runtime.log(muted(`… +${summary.queuedSystemEvents.length - 5} more`));
+      runtime.log(muted(`… +${summary.queuedSystemEvents.length - 5} ${IS_XCLAW ? "еще" : "more"}`));
     }
   }
 
   if (health) {
     runtime.log("");
-    runtime.log(theme.heading("Health"));
+    runtime.log(theme.heading(IS_XCLAW ? "Здоровье" : "Health"));
     const rows: Array<Record<string, string>> = [];
     rows.push({
-      Item: "Gateway",
+      Item: IS_XCLAW ? "Шлюз" : "Gateway",
       Status: ok("reachable"),
       Detail: `${health.durationMs}ms`,
     });
@@ -642,9 +679,9 @@ export async function statusCommand(
       renderTable({
         width: tableWidth,
         columns: [
-          { key: "Item", header: "Item", minWidth: 10 },
-          { key: "Status", header: "Status", minWidth: 8 },
-          { key: "Detail", header: "Detail", flex: true, minWidth: 28 },
+          { key: "Item", header: IS_XCLAW ? "Параметр" : "Item", minWidth: 10 },
+          { key: "Status", header: IS_XCLAW ? "Статус" : "Status", minWidth: 8 },
+          { key: "Detail", header: IS_XCLAW ? "Детали" : "Detail", flex: true, minWidth: 28 },
         ],
         rows,
       }).trimEnd(),
@@ -653,27 +690,27 @@ export async function statusCommand(
 
   if (usage) {
     runtime.log("");
-    runtime.log(theme.heading("Usage"));
+    runtime.log(theme.heading(IS_XCLAW ? "Использование" : "Usage"));
     for (const line of formatUsageReportLines(usage)) {
       runtime.log(line);
     }
   }
 
   runtime.log("");
-  runtime.log("FAQ: https://docs.openclaw.ai/faq");
-  runtime.log("Troubleshooting: https://docs.openclaw.ai/troubleshooting");
+  runtime.log(`FAQ: https://docs.openclaw.ai/faq`);
+  runtime.log(`Troubleshooting: https://docs.openclaw.ai/troubleshooting`);
   runtime.log("");
   const updateHint = formatUpdateAvailableHint(update);
   if (updateHint) {
     runtime.log(theme.warn(updateHint));
     runtime.log("");
   }
-  runtime.log("Next steps:");
-  runtime.log(`  Need to share?      ${formatCliCommand("openclaw status --all")}`);
-  runtime.log(`  Need to debug live? ${formatCliCommand("openclaw logs --follow")}`);
+  runtime.log(IS_XCLAW ? "Следующие шаги:" : "Next steps:");
+  runtime.log(`  ${IS_XCLAW ? "Нужно поделиться?" : "Need to share?"}      ${formatCliCommand(IS_XCLAW ? "xclaw status --all" : "openclaw status --all")}`);
+  runtime.log(`  ${IS_XCLAW ? "Живые логи?" : "Need to debug live?"} ${formatCliCommand(IS_XCLAW ? "xclaw logs --follow" : "openclaw logs --follow")}`);
   if (gatewayReachable) {
-    runtime.log(`  Need to test channels? ${formatCliCommand("openclaw status --deep")}`);
+    runtime.log(`  ${IS_XCLAW ? "Проверить каналы?" : "Need to test channels?"} ${formatCliCommand(IS_XCLAW ? "xclaw status --deep" : "openclaw status --deep")}`);
   } else {
-    runtime.log(`  Fix reachability first: ${formatCliCommand("openclaw gateway probe")}`);
+    runtime.log(`  ${IS_XCLAW ? "Сначала почините шлюз:" : "Fix reachability first:"} ${formatCliCommand(IS_XCLAW ? "xclaw gateway probe" : "openclaw gateway probe")}`);
   }
 }

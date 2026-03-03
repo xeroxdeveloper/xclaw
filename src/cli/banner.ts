@@ -1,7 +1,7 @@
 import { resolveCommitHash } from "../infra/git-commit.js";
 import { visibleWidth } from "../terminal/ansi.js";
 import { isRich, theme } from "../terminal/theme.js";
-import { isXClawMode } from "../xclaw/mode.js";
+import { IS_XCLAW_MODE } from "../xclaw/mode.js";
 import { hasRootVersionAlias } from "./argv.js";
 import { pickTagline, type TaglineOptions } from "./tagline.js";
 
@@ -41,8 +41,9 @@ export function formatCliBannerLine(version: string, options: BannerOptions = {}
   const commitLabel = commit ?? "unknown";
   const tagline = pickTagline(options);
   const rich = options.richTty ?? isRich();
-  const title = isXClawMode() ? "🦞 XClaw" : "🦞 OpenClaw";
-  const prefix = "🦞 ";
+  const IS_XCLAW = IS_XCLAW_MODE;
+  const title = IS_XCLAW ? "💎 XClaw" : "💎 OpenClaw";
+  const prefix = IS_XCLAW ? "💎 " : "💎 ";
   const columns = options.columns ?? process.stdout.columns ?? 120;
   const plainFullLine = `${title} ${version} (${commitLabel}) — ${tagline}`;
   const fitsOnOneLine = visibleWidth(plainFullLine) <= columns;
@@ -55,31 +56,33 @@ export function formatCliBannerLine(version: string, options: BannerOptions = {}
     const line1 = `${theme.heading(title)} ${theme.info(version)} ${theme.muted(
       `(${commitLabel})`,
     )}`;
-    const line2 = `${" ".repeat(prefix.length)}${theme.accentDim(tagline)}`;
+    const line2 = `${" ".repeat(visibleWidth(prefix))}${theme.accentDim(tagline)}`;
     return `${line1}\n${line2}`;
   }
   if (fitsOnOneLine) {
     return plainFullLine;
   }
   const line1 = `${title} ${version} (${commitLabel})`;
-  const line2 = `${" ".repeat(prefix.length)}${tagline}`;
+  const line2 = `${" ".repeat(visibleWidth(prefix))}${tagline}`;
   return `${line1}\n${line2}`;
 }
 
-const LOBSTER_ASCII = [
+const DIAMOND_ASCII = [
   "▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄",
-  "  ██░░██▄░▄██░███████░██░░░░░░███████░██░██░█░░██   ",
-  "  ██░░░▀███▀░░██░░░░░░██░░░░░░██░██░█░██░██░█░░██   ",
-  "  ██░░██▀░▀██░███████░███████░██░██░█░▀██▀██▀░░██   ",
+  "  ██   ██   ██████  ██        █████   ██   ██   ",
+  "   ██ ██   ██       ██       ██   ██  ██   ██   ",
+  "    ███    ██       ██       ███████  ██ █ ██   ",
+  "   ██ ██   ██       ██       ██   ██  ███████   ",
+  "  ██   ██  ██████  ███████  ██   ██   ██ ██    ",
   "▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀",
-  "                    🦞 XCLAW 🦞                     ",
+  "                    💎 XCLAW 💎                     ",
   " ",
 ];
 
 export function formatCliBannerArt(options: BannerOptions = {}): string {
   const rich = options.richTty ?? isRich();
   if (!rich) {
-    return LOBSTER_ASCII.join("\n");
+    return DIAMOND_ASCII.join("\n");
   }
 
   const colorChar = (ch: string) => {
@@ -95,13 +98,13 @@ export function formatCliBannerArt(options: BannerOptions = {}): string {
     return theme.muted(ch);
   };
 
-  const colored = LOBSTER_ASCII.map((line) => {
+  const colored = DIAMOND_ASCII.map((line) => {
     if (line.includes("XCLAW")) {
       return (
         theme.muted("                    ") +
-        theme.accent("🦞") +
+        theme.accent("💎") +
         theme.info(" XCLAW ") +
-        theme.accent("🦞")
+        theme.accent("💎")
       );
     }
     return splitGraphemes(line).map(colorChar).join("");

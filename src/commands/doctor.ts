@@ -69,9 +69,10 @@ export async function doctorCommand(
   runtime: RuntimeEnv = defaultRuntime,
   options: DoctorOptions = {},
 ) {
+  const IS_XCLAW = IS_XCLAW_MODE;
   const prompter = createDoctorPrompter({ runtime, options });
   printWizardHeader(runtime);
-  intro("OpenClaw doctor");
+  intro(IS_XCLAW ? "Доктор XClaw" : "OpenClaw doctor");
 
   const root = await resolveOpenClawPackageRoot({
     moduleUrl: import.meta.url,
@@ -105,15 +106,25 @@ export async function doctorCommand(
 
   const configPath = configResult.path ?? CONFIG_PATH;
   if (!cfg.gateway?.mode) {
-    const lines = [
-      "gateway.mode is unset; gateway start will be blocked.",
-      `Fix: run ${formatCliCommand("openclaw configure")} and set Gateway mode (local/remote).`,
-      `Or set directly: ${formatCliCommand("openclaw config set gateway.mode local")}`,
-    ];
+    const lines = IS_XCLAW
+      ? [
+          "gateway.mode не установлен; запуск шлюза будет заблокирован.",
+          `Исправьте: запустите ${formatCliCommand("xclaw configure")} и установите режим Gateway (local/remote).`,
+          `Или установите напрямую: ${formatCliCommand("xclaw config set gateway.mode local")}`,
+        ]
+      : [
+          "gateway.mode is unset; gateway start will be blocked.",
+          `Fix: run ${formatCliCommand("openclaw configure")} and set Gateway mode (local/remote).`,
+          `Or set directly: ${formatCliCommand("openclaw config set gateway.mode local")}`,
+        ];
     if (!fs.existsSync(configPath)) {
-      lines.push(`Missing config: run ${formatCliCommand("openclaw setup")} first.`);
+      lines.push(
+        IS_XCLAW
+          ? `Отсутствует конфиг: сначала запустите ${formatCliCommand("xclaw setup")}.`
+          : `Missing config: run ${formatCliCommand("openclaw setup")} first.`,
+      );
     }
-    note(lines.join("\n"), "Gateway");
+    note(lines.join("\n"), IS_XCLAW ? "Шлюз" : "Gateway");
   }
 
   cfg = await maybeRepairAnthropicOAuthProfileId(cfg, prompter);
@@ -135,8 +146,10 @@ export async function doctorCommand(
     const needsToken = auth.mode !== "password" && (auth.mode !== "token" || !auth.token);
     if (needsToken) {
       note(
-        "Gateway auth is off or missing a token. Token auth is now the recommended default (including loopback).",
-        "Gateway auth",
+        IS_XCLAW
+          ? "Аутентификация шлюза отключена или отсутствует токен. Токен теперь является рекомендуемым стандартом."
+          : "Gateway auth is off or missing a token. Token auth is now the recommended default (including loopback).",
+        IS_XCLAW ? "Доступ к шлюзу" : "Gateway auth",
       );
       const shouldSetToken =
         options.generateGatewayToken === true
@@ -144,7 +157,7 @@ export async function doctorCommand(
           : options.nonInteractive === true
             ? false
             : await prompter.confirmRepair({
-                message: "Generate and configure a gateway token now?",
+                message: IS_XCLAW ? "Сгенерировать и настроить токен шлюза прямо сейчас?" : "Generate and configure a gateway token now?",
                 initialValue: true,
               });
       if (shouldSetToken) {
@@ -160,19 +173,19 @@ export async function doctorCommand(
             },
           },
         };
-        note("Gateway token configured.", "Gateway auth");
+        note(IS_XCLAW ? "Токен шлюза настроен." : "Gateway token configured.", IS_XCLAW ? "Доступ к шлюзу" : "Gateway auth");
       }
     }
   }
 
   const legacyState = await detectLegacyStateMigrations({ cfg });
   if (legacyState.preview.length > 0) {
-    note(legacyState.preview.join("\n"), "Legacy state detected");
+    note(legacyState.preview.join("\n"), IS_XCLAW ? "Обнаружено устаревшее состояние" : "Legacy state detected");
     const migrate =
       options.nonInteractive === true
         ? true
         : await prompter.confirm({
-            message: "Migrate legacy state (sessions/agent/WhatsApp auth) now?",
+            message: IS_XCLAW ? "Перенести устаревшее состояние (сессии/агенты) прямо сейчас?" : "Migrate legacy state (sessions/agent/WhatsApp auth) now?",
             initialValue: true,
           });
     if (migrate) {
@@ -180,10 +193,10 @@ export async function doctorCommand(
         detected: legacyState,
       });
       if (migrated.changes.length > 0) {
-        note(migrated.changes.join("\n"), "Doctor changes");
+        note(migrated.changes.join("\n"), IS_XCLAW ? "Изменения доктора" : "Doctor changes");
       }
       if (migrated.warnings.length > 0) {
-        note(migrated.warnings.join("\n"), "Doctor warnings");
+        note(migrated.warnings.join("\n"), IS_XCLAW ? "Предупреждения доктора" : "Doctor warnings");
       }
     }
   }
@@ -301,28 +314,32 @@ export async function doctorCommand(
     logConfigUpdated(runtime);
     const backupPath = `${CONFIG_PATH}.bak`;
     if (fs.existsSync(backupPath)) {
-      runtime.log(`Backup: ${shortenHomePath(backupPath)}`);
+      runtime.log(`${IS_XCLAW ? "Бэкап" : "Backup"}: ${shortenHomePath(backupPath)}`);
     }
   } else if (!prompter.shouldRepair) {
-    runtime.log(`Run "${formatCliCommand("openclaw doctor --fix")}" to apply changes.`);
+    runtime.log(
+      IS_XCLAW
+        ? `Запустите "${formatCliCommand("xclaw doctor --fix")}" для применения изменений.`
+        : `Run "${formatCliCommand("openclaw doctor --fix")}" to apply changes.`,
+    );
   }
 
   if (options.workspaceSuggestions !== false) {
     const workspaceDir = resolveAgentWorkspaceDir(cfg, resolveDefaultAgentId(cfg));
     noteWorkspaceBackupTip(workspaceDir);
     if (await shouldSuggestMemorySystem(workspaceDir)) {
-      note(MEMORY_SYSTEM_PROMPT, "Workspace");
+      note(MEMORY_SYSTEM_PROMPT, IS_XCLAW ? "Рабочая область" : "Workspace");
     }
   }
 
   const finalSnapshot = await readConfigFileSnapshot();
   if (finalSnapshot.exists && !finalSnapshot.valid) {
-    runtime.error("Invalid config:");
+    runtime.error(IS_XCLAW ? "Невалидный конфиг:" : "Invalid config:");
     for (const issue of finalSnapshot.issues) {
       const path = issue.path || "<root>";
       runtime.error(`- ${path}: ${issue.message}`);
     }
   }
 
-  outro("Doctor complete.");
+  outro(IS_XCLAW ? "Доктор завершил проверку." : "Doctor complete.");
 }

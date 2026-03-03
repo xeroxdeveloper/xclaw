@@ -1,16 +1,12 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { isXClawMode } from "../xclaw/mode.js";
+import { IS_XCLAW_MODE } from "../xclaw/mode.js";
 import { expandHomePrefix, resolveRequiredHomeDir } from "../infra/home-dir.js";
 import type { OpenClawConfig } from "./types.js";
 
 /**
- * Nix mode detection: When OPENCLAW_NIX_MODE=1, the gateway is running under Nix.
- * In this mode:
- * - No auto-install flows should be attempted
- * - Missing dependencies should produce actionable Nix-specific error messages
- * - Config is managed externally (read-only from Nix perspective)
+ * Nix mode detection
  */
 export function resolveIsNixMode(env: NodeJS.ProcessEnv = process.env): boolean {
   return env.OPENCLAW_NIX_MODE === "1";
@@ -22,23 +18,22 @@ export const isNixMode = resolveIsNixMode();
 const LEGACY_STATE_DIRNAMES = [".clawdbot", ".moldbot", ".moltbot"] as const;
 
 function getNewStateDirname(): string {
-  return isXClawMode() ? ".xclaw" : ".openclaw";
+  return IS_XCLAW_MODE ? ".xclaw" : ".openclaw";
 }
 
 function getConfigFilename(): string {
-  return isXClawMode() ? "xclaw.json" : "openclaw.json";
+  return IS_XCLAW_MODE ? "xclaw.json" : "openclaw.json";
 }
 
 function getLegacyConfigFilenames(): string[] {
-  return isXClawMode()
-    ? []
+  return IS_XCLAW_MODE 
+    ? [] 
     : ["clawdbot.json", "moldbot.json", "moltbot.json"];
 }
 
 function getLegacyStateDirnames(): string[] {
-  return isXClawMode() ? [] : [...LEGACY_STATE_DIRNAMES];
+  return IS_XCLAW_MODE ? [] : [...LEGACY_STATE_DIRNAMES];
 }
-
 
 function resolveDefaultHomeDir(): string {
   return resolveRequiredHomeDir(process.env, os.homedir);
@@ -71,8 +66,6 @@ export function resolveNewStateDir(homedir: () => string = resolveDefaultHomeDir
 
 /**
  * State directory for mutable data (sessions, logs, caches).
- * Can be overridden via OPENCLAW_STATE_DIR.
- * Default: ~/.openclaw
  */
 export function resolveStateDir(
   env: NodeJS.ProcessEnv = process.env,
@@ -126,8 +119,6 @@ export const STATE_DIR = resolveStateDir();
 
 /**
  * Config file path (JSON5).
- * Can be overridden via OPENCLAW_CONFIG_PATH.
- * Default: ~/.openclaw/openclaw.json (or $OPENCLAW_STATE_DIR/openclaw.json)
  */
 export function resolveCanonicalConfigPath(
   env: NodeJS.ProcessEnv = process.env,
@@ -141,8 +132,7 @@ export function resolveCanonicalConfigPath(
 }
 
 /**
- * Resolve the active config path by preferring existing config candidates
- * before falling back to the canonical path.
+ * Resolve the active config path by preferring existing config candidates.
  */
 export function resolveConfigPathCandidate(
   env: NodeJS.ProcessEnv = process.env,
@@ -163,18 +153,18 @@ export function resolveConfigPathCandidate(
 }
 
 /**
- * Active config path (prefers existing config files).
+ * Active config path.
  */
 export function resolveConfigPath(
   env: NodeJS.ProcessEnv = process.env,
   stateDir: string = resolveStateDir(env, envHomedir(env)),
   homedir: () => string = envHomedir(env),
 ): string {
-  const override = env.OPENCLAW_CONFIG_PATH?.trim();
+  const override = env.XCLAW_CONFIG_PATH?.trim() || env.OPENCLAW_CONFIG_PATH?.trim();
   if (override) {
     return resolveUserPath(override, env, homedir);
   }
-  const stateOverride = env.OPENCLAW_STATE_DIR?.trim();
+  const stateOverride = env.XCLAW_STATE_DIR?.trim() || env.OPENCLAW_STATE_DIR?.trim();
   const candidates = [
     path.join(stateDir, getConfigFilename()),
     ...getLegacyConfigFilenames().map((name) => path.join(stateDir, name)),
@@ -190,27 +180,26 @@ export function resolveConfigPath(
     return existing;
   }
   if (stateOverride) {
-    return path.join(stateDir, CONFIG_FILENAME);
+    return path.join(stateDir, getConfigFilename());
   }
   const defaultStateDir = resolveStateDir(env, homedir);
   if (path.resolve(stateDir) === path.resolve(defaultStateDir)) {
     return resolveConfigPathCandidate(env, homedir);
   }
-  return path.join(stateDir, CONFIG_FILENAME);
+  return path.join(stateDir, getConfigFilename());
 }
 
 export const CONFIG_PATH = resolveConfigPathCandidate();
 
 /**
- * Resolve default config path candidates across default locations.
- * Order: explicit config path → state-dir-derived paths → new default.
+ * Resolve default config path candidates.
  */
 export function resolveDefaultConfigCandidates(
   env: NodeJS.ProcessEnv = process.env,
   homedir: () => string = envHomedir(env),
 ): string[] {
   const effectiveHomedir = () => resolveRequiredHomeDir(env, homedir);
-  const explicit = env.OPENCLAW_CONFIG_PATH?.trim() || env.CLAWDBOT_CONFIG_PATH?.trim();
+  const explicit = env.XCLAW_CONFIG_PATH?.trim() || env.OPENCLAW_CONFIG_PATH?.trim() || env.CLAWDBOT_CONFIG_PATH?.trim();
   if (explicit) {
     return [resolveUserPath(explicit, env, effectiveHomedir)];
   }
@@ -235,12 +224,11 @@ export const DEFAULT_GATEWAY_PORT = 18789;
 
 /**
  * Gateway lock directory (ephemeral).
- * Default: os.tmpdir()/openclaw-<uid> (uid suffix when available).
  */
 export function resolveGatewayLockDir(tmpdir: () => string = os.tmpdir): string {
   const base = tmpdir();
   const uid = typeof process.getuid === "function" ? process.getuid() : undefined;
-  const prefix = isXClawMode() ? "xlaw" : "openclaw";
+  const prefix = IS_XCLAW_MODE ? "xlaw" : "openclaw";
   const suffix = uid != null ? `${prefix}-${uid}` : prefix;
   return path.join(base, suffix);
 }
@@ -249,10 +237,6 @@ const OAUTH_FILENAME = "oauth.json";
 
 /**
  * OAuth credentials storage directory.
- *
- * Precedence:
- * - `OPENCLAW_OAUTH_DIR` (explicit override)
- * - `$*_STATE_DIR/credentials` (canonical server/default)
  */
 export function resolveOAuthDir(
   env: NodeJS.ProcessEnv = process.env,

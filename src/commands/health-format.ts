@@ -1,17 +1,26 @@
+import { IS_XCLAW_MODE } from "../xclaw/mode.js";
 import { colorize, isRich, theme } from "../terminal/theme.js";
 
 const formatKv = (line: string, rich: boolean) => {
+  const IS_XCLAW = IS_XCLAW_MODE;
   const idx = line.indexOf(": ");
   if (idx <= 0) {
     return colorize(rich, theme.muted, line);
   }
-  const key = line.slice(0, idx);
+  let key = line.slice(0, idx);
   const value = line.slice(idx + 2);
 
+  if (IS_XCLAW) {
+    if (key === "Gateway target") key = "Цель шлюза";
+    if (key === "Config") key = "Конфиг";
+    if (key === "Source") key = "Источник";
+    if (key === "Bind") key = "Привязка";
+  }
+
   const valueColor =
-    key === "Gateway target" || key === "Config"
+    key === "Gateway target" || key === "Цель шлюза" || key === "Config" || key === "Конфиг"
       ? theme.command
-      : key === "Source"
+      : key === "Source" || key === "Источник"
         ? theme.muted
         : theme.info;
 
@@ -21,10 +30,17 @@ const formatKv = (line: string, rich: boolean) => {
 export function formatHealthCheckFailure(err: unknown, opts: { rich?: boolean } = {}): string {
   const rich = opts.rich ?? isRich();
   const raw = String(err);
+  const IS_XCLAW = IS_XCLAW_MODE;
   const message = err instanceof Error ? err.message : raw;
 
+  const translatedRaw = IS_XCLAW 
+    ? raw.replace("gateway closed", "шлюз закрыт")
+         .replace("abnormal closure", "аномальное закрытие")
+         .replace("no close reason", "причина не указана")
+    : raw;
+
   if (!rich) {
-    return `Health check failed: ${raw}`;
+    return IS_XCLAW ? `Ошибка проверки здоровья: ${translatedRaw}` : `Health check failed: ${raw}`;
   }
 
   const lines = message
@@ -39,9 +55,9 @@ export function formatHealthCheckFailure(err: unknown, opts: { rich?: boolean } 
   const detailLines = detailsIdx >= 0 ? lines.slice(detailsIdx) : [];
 
   const summary = summaryLines.length > 0 ? summaryLines.join(" ") : message;
-  const header = colorize(rich, theme.error.bold, "Health check failed");
+  const header = colorize(rich, theme.error.bold, IS_XCLAW ? "Ошибка проверки здоровья" : "Health check failed");
 
-  const out: string[] = [`${header}: ${summary}`];
+  const out: string[] = [`${header}: ${IS_XCLAW ? summary.replace("gateway closed", "шлюз закрыт") : summary}`];
   for (const line of detailLines) {
     out.push(`  ${formatKv(line, rich)}`);
   }

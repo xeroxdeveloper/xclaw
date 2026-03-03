@@ -44,7 +44,7 @@ import { resolveAgentRoute } from "../routing/resolve-route.js";
 import { resolveThreadSessionKeys } from "../routing/session-key.js";
 import type { RuntimeEnv } from "../runtime.js";
 import {
-  isXClawMode,
+  IS_XCLAW_MODE,
   resolveTelegramNativeCommandAllowlist,
   resolveTelegramOwnerIds,
 } from "../xclaw/mode.js";
@@ -117,7 +117,7 @@ function isTelegramOwner(senderId: string, allowFrom?: Array<string | number>): 
   if (ownerIds.has(normalizedSenderId.toLowerCase())) {
     return true;
   }
-  if (!isXClawMode()) {
+  if (!IS_XCLAW_MODE) {
     return false;
   }
   const normalizedAllow = new Set(
@@ -513,7 +513,7 @@ export const registerTelegramNativeCommands = ({
   });
 
   const registerXClawOwnerExecCommand = () => {
-    if (!isXClawMode()) {
+    if (!IS_XCLAW_MODE) {
       return;
     }
     bot.command("xexec", async (ctx: TelegramNativeCommandContext) => {

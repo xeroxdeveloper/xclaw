@@ -120,6 +120,20 @@ const MemorySchema = z
   .strict()
   .optional();
 
+const XClawSchema = z
+  .object({
+    ownerOnly: z.boolean().optional(),
+    lang: z.string().optional(),
+    compactMode: z.boolean().optional(),
+    loadingIndicator: z.boolean().optional(),
+    reactionStatuses: z.boolean().optional(),
+    autoSummarize: z.boolean().optional(),
+    autoUpdate: z.boolean().optional(),
+    groupWhitelist: z.array(z.string()).optional(),
+  })
+  .strict()
+  .optional();
+
 const HttpUrlSchema = z
   .string()
   .url()
@@ -726,6 +740,7 @@ export const OpenClawSchema = z
       .strict()
       .optional(),
     memory: MemorySchema,
+    xclaw: XClawSchema,
     skills: z
       .object({
         allowBundled: z.array(z.string()).optional(),

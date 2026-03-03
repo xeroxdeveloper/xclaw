@@ -2,6 +2,8 @@ import type { Command } from "commander";
 import { formatDocsLink } from "../../terminal/links.js";
 import { isRich, theme } from "../../terminal/theme.js";
 import { escapeRegExp } from "../../utils.js";
+import { IS_XCLAW_MODE } from "../../xclaw/mode.js";
+import { t } from "../../xclaw/i18n.js";
 import { hasFlag, hasRootVersionAlias } from "../argv.js";
 import { formatCliBannerLine, hasEmittedCliBanner } from "../banner.js";
 import { replaceCliName, resolveCliName } from "../cli-name.js";
@@ -16,55 +18,61 @@ const ROOT_COMMANDS_WITH_SUBCOMMANDS = new Set([
   ...getCoreCliCommandsWithSubcommands(),
   ...getSubCliCommandsWithSubcommands(),
 ]);
-const ROOT_COMMANDS_HINT =
-  "Hint: commands suffixed with * have subcommands. Run <command> --help for details.";
+const ROOT_COMMANDS_HINT = t("help.hint");
 
 const EXAMPLES = [
-  ["openclaw models --help", "Show detailed help for the models command."],
+  ["xclaw models --help", "Показать детальную справку по команде models."],
   [
-    "openclaw channels login --verbose",
-    "Link personal WhatsApp Web and show QR + connection logs.",
+    "xclaw channels login --verbose",
+    "Привязать личный WhatsApp Web и показать QR + логи подключения.",
   ],
   [
-    'openclaw message send --target +15555550123 --message "Hi" --json',
-    "Send via your web session and print JSON result.",
+    'xclaw message send --target +15555550123 --message "Привет" --json',
+    "Отправить сообщение и вывести результат в формате JSON.",
   ],
-  ["openclaw gateway --port 18789", "Run the WebSocket Gateway locally."],
-  ["openclaw --dev gateway", "Run a dev Gateway (isolated state/config) on ws://127.0.0.1:19001."],
-  ["openclaw gateway --force", "Kill anything bound to the default gateway port, then start it."],
-  ["openclaw gateway ...", "Gateway control via WebSocket."],
+  ["xclaw gateway --port 18789", "Запустить WebSocket шлюз локально."],
+  ["xclaw --dev gateway", "Запустить шлюз в режиме разработки (изолированный конфиг)."],
+  ["xclaw gateway --force", "Принудительно освободить порт и запустить шлюз."],
+  ["xclaw gateway ...", "Управление шлюзом через WebSocket."],
   [
-    'openclaw agent --to +15555550123 --message "Run summary" --deliver',
-    "Talk directly to the agent using the Gateway; optionally send the WhatsApp reply.",
+    'xclaw agent --to +15555550123 --message "Отчет" --deliver',
+    "Поговорить напрямую с агентом через шлюз.",
   ],
   [
-    'openclaw message send --channel telegram --target @mychat --message "Hi"',
-    "Send via your Telegram bot.",
+    'xclaw message send --channel telegram --target @mychat --message "Привет"',
+    "Отправить через вашего Telegram бота.",
   ],
 ] as const;
 
 export function configureProgramHelp(program: Command, ctx: ProgramContext) {
+  const IS_XCLAW = IS_XCLAW_MODE;
   program
     .name(CLI_NAME)
     .description("")
     .version(ctx.programVersion)
     .option(
       "--dev",
-      "Dev profile: isolate state under ~/.openclaw-dev, default gateway port 19001, and shift derived ports (browser/canvas)",
+      IS_XCLAW
+        ? "Режим разработки: изолированное состояние в ~/.xclaw-dev, порт 19001."
+        : "Dev profile: isolate state under ~/.openclaw-dev, default gateway port 19001, and shift derived ports (browser/canvas)",
     )
     .option(
       "--profile <name>",
-      "Use a named profile (isolates OPENCLAW_STATE_DIR/OPENCLAW_CONFIG_PATH under ~/.openclaw-<name>)",
+      IS_XCLAW
+        ? "Использовать именованный профиль (изолирует конфиг в ~/.xclaw-<имя>)"
+        : "Use a named profile (isolates OPENCLAW_STATE_DIR/OPENCLAW_CONFIG_PATH under ~/.openclaw-<name>)",
     )
     .option(
       "--log-level <level>",
-      `Global log level override for file + console (${CLI_LOG_LEVEL_VALUES})`,
+      IS_XCLAW
+        ? `Переопределение уровня логирования (${CLI_LOG_LEVEL_VALUES})`
+        : `Global log level override for file + console (${CLI_LOG_LEVEL_VALUES})`,
       parseCliLogLevelOption,
     );
 
-  program.option("--no-color", "Disable ANSI colors", false);
-  program.helpOption("-h, --help", "Display help for command");
-  program.helpCommand("help [command]", "Display help for command");
+  program.option("--no-color", IS_XCLAW ? "Отключить цвета ANSI" : "Disable ANSI colors", false);
+  program.helpOption("-h, --help", IS_XCLAW ? "Показать справку" : "Display help for command");
+  program.helpCommand("help [command]", IS_XCLAW ? "Показать справку по команде" : "Display help for command");
 
   program.configureHelp({
     // sort options and subcommands alphabetically
@@ -85,13 +93,14 @@ export function configureProgramHelp(program: Command, ctx: ProgramContext) {
       "m",
     ).test(output);
     if (isRootHelp && /^Commands:/m.test(output)) {
-      output = output.replace(/^Commands:/m, `Commands:\n  ${theme.muted(ROOT_COMMANDS_HINT)}`);
+      output = output.replace(/^Commands:/m, `${t("help.commands")}\n  ${theme.muted(ROOT_COMMANDS_HINT)}`);
     }
 
     return output
-      .replace(/^Usage:/gm, theme.heading("Usage:"))
-      .replace(/^Options:/gm, theme.heading("Options:"))
-      .replace(/^Commands:/gm, theme.heading("Commands:"));
+      .replace(/^Usage:/gm, theme.heading(t("help.usage")))
+      .replace(/^Options:/gm, theme.heading(t("help.options")))
+      .replace(/^Commands:/gm, theme.heading(t("help.commands")))
+      .replace(/^Arguments:/gm, theme.heading(t("help.arguments")));
   };
 
   program.configureOutput({
@@ -131,6 +140,6 @@ export function configureProgramHelp(program: Command, ctx: ProgramContext) {
       return "";
     }
     const docs = formatDocsLink("/cli", "docs.openclaw.ai/cli");
-    return `\n${theme.heading("Examples:")}\n${fmtExamples}\n\n${theme.muted("Docs:")} ${docs}\n`;
+    return `\n${theme.heading(t("help.examples"))}\n${fmtExamples}\n\n${theme.muted(t("help.docs"))} ${docs}\n`;
   });
 }

@@ -1,3 +1,4 @@
+import { IS_XCLAW_MODE } from "../xclaw/mode.js";
 import { resolveAgentWorkspaceDir, resolveDefaultAgentId } from "../agents/agent-scope.js";
 import { formatCliCommand } from "../cli/command-format.js";
 import type { OpenClawConfig } from "../config/config.js";
@@ -10,14 +11,22 @@ export async function setupInternalHooks(
   runtime: RuntimeEnv,
   prompter: WizardPrompter,
 ): Promise<OpenClawConfig> {
+  const IS_XCLAW = IS_XCLAW_MODE;
   await prompter.note(
-    [
-      "Hooks let you automate actions when agent commands are issued.",
-      "Example: Save session context to memory when you issue /new or /reset.",
-      "",
-      "Learn more: https://docs.openclaw.ai/automation/hooks",
-    ].join("\n"),
-    "Hooks",
+    IS_XCLAW
+      ? [
+          "Хуки позволяют автоматизировать действия при выполнении команд агента.",
+          "Пример: Сохранить контекст сессии в память при выполнении /new или /reset.",
+          "",
+          "Документация: https://docs.openclaw.ai/automation/hooks",
+        ].join("\n")
+      : [
+          "Hooks let you automate actions when agent commands are issued.",
+          "Example: Save session context to memory when you issue /new or /reset.",
+          "",
+          "Learn more: https://docs.openclaw.ai/automation/hooks",
+        ].join("\n"),
+    IS_XCLAW ? "Хуки" : "Hooks",
   );
 
   // Discover available hooks using the hook discovery system
@@ -29,16 +38,18 @@ export async function setupInternalHooks(
 
   if (eligibleHooks.length === 0) {
     await prompter.note(
-      "No eligible hooks found. You can configure hooks later in your config.",
-      "No Hooks Available",
+      IS_XCLAW
+        ? "Подходящих хуков не найдено. Вы можете настроить их позже в конфиге."
+        : "No eligible hooks found. You can configure hooks later in your config.",
+      IS_XCLAW ? "Нет доступных хуков" : "No Hooks Available",
     );
     return cfg;
   }
 
   const toEnable = await prompter.multiselect({
-    message: "Enable hooks?",
+    message: IS_XCLAW ? "Включить хуки?" : "Enable hooks?",
     options: [
-      { value: "__skip__", label: "Skip for now" },
+      { value: "__skip__", label: IS_XCLAW ? "Пропустить" : "Skip for now" },
       ...eligibleHooks.map((hook) => ({
         value: hook.name,
         label: `${hook.emoji ?? "🔗"} ${hook.name}`,
@@ -70,15 +81,24 @@ export async function setupInternalHooks(
   };
 
   await prompter.note(
-    [
-      `Enabled ${selected.length} hook${selected.length > 1 ? "s" : ""}: ${selected.join(", ")}`,
-      "",
-      "You can manage hooks later with:",
-      `  ${formatCliCommand("openclaw hooks list")}`,
-      `  ${formatCliCommand("openclaw hooks enable <name>")}`,
-      `  ${formatCliCommand("openclaw hooks disable <name>")}`,
-    ].join("\n"),
-    "Hooks Configured",
+    IS_XCLAW
+      ? [
+          `Включено ${selected.length} хук${selected.length === 1 ? "" : selected.length < 5 ? "а" : "ов"}: ${selected.join(", ")}`,
+          "",
+          "Вы можете управлять хуками позже:",
+          `  ${formatCliCommand("xclaw hooks list")}`,
+          `  ${formatCliCommand("xclaw hooks enable <имя>")}`,
+          `  ${formatCliCommand("xclaw hooks disable <имя>")}`,
+        ].join("\n")
+      : [
+          `Enabled ${selected.length} hook${selected.length > 1 ? "s" : ""}: ${selected.join(", ")}`,
+          "",
+          "You can manage hooks later with:",
+          `  ${formatCliCommand("openclaw hooks list")}`,
+          `  ${formatCliCommand("openclaw hooks enable <name>")}`,
+          `  ${formatCliCommand("openclaw hooks disable <name>")}`,
+        ].join("\n"),
+    IS_XCLAW ? "Хуки настроены" : "Hooks Configured",
   );
 
   return next;

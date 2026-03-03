@@ -1,3 +1,5 @@
+import { IS_XCLAW_MODE } from "../xclaw/mode.js";
+import { t } from "../xclaw/i18n.js";
 import {
   normalizeGatewayTokenInput,
   randomToken,
@@ -57,15 +59,16 @@ export async function configureGatewayForOnboarding(
   const { flow, localPort, quickstartGateway, prompter } = opts;
   let { nextConfig } = opts;
 
+  const IS_XCLAW = IS_XCLAW_MODE;
   const port =
     flow === "quickstart"
       ? quickstartGateway.port
       : Number.parseInt(
           String(
             await prompter.text({
-              message: "Gateway port",
+              message: IS_XCLAW ? "Порт шлюза" : "Gateway port",
               initialValue: String(localPort),
-              validate: (value) => (Number.isFinite(Number(value)) ? undefined : "Invalid port"),
+              validate: (value) => (Number.isFinite(Number(value)) ? undefined : IS_XCLAW ? "Некорректный порт" : "Invalid port"),
             }),
           ),
           10,
@@ -75,13 +78,13 @@ export async function configureGatewayForOnboarding(
     flow === "quickstart"
       ? quickstartGateway.bind
       : await prompter.select<GatewayWizardSettings["bind"]>({
-          message: "Gateway bind",
+          message: IS_XCLAW ? "Привязка шлюза (bind)" : "Gateway bind",
           options: [
-            { value: "loopback", label: "Loopback (127.0.0.1)" },
-            { value: "lan", label: "LAN (0.0.0.0)" },
+            { value: "loopback", label: IS_XCLAW ? "Локально (127.0.0.1)" : "Loopback (127.0.0.1)" },
+            { value: "lan", label: IS_XCLAW ? "Локальная сеть (0.0.0.0)" : "LAN (0.0.0.0)" },
             { value: "tailnet", label: "Tailnet (Tailscale IP)" },
-            { value: "auto", label: "Auto (Loopback → LAN)" },
-            { value: "custom", label: "Custom IP" },
+            { value: "auto", label: IS_XCLAW ? "Авто" : "Auto (Loopback → LAN)" },
+            { value: "custom", label: IS_XCLAW ? "Свой IP" : "Custom IP" },
           ],
         });
 
@@ -90,7 +93,7 @@ export async function configureGatewayForOnboarding(
     const needsPrompt = flow !== "quickstart" || !customBindHost;
     if (needsPrompt) {
       const input = await prompter.text({
-        message: "Custom IP address",
+        message: IS_XCLAW ? "Свой IP адрес" : "Custom IP address",
         placeholder: "192.168.1.100",
         initialValue: customBindHost ?? "",
         validate: validateIPv4AddressInput,
@@ -103,14 +106,14 @@ export async function configureGatewayForOnboarding(
     flow === "quickstart"
       ? quickstartGateway.authMode
       : ((await prompter.select({
-          message: "Gateway auth",
+          message: IS_XCLAW ? "Аутентификация шлюза" : "Gateway auth",
           options: [
             {
               value: "token",
-              label: "Token",
-              hint: "Recommended default (local + remote)",
+              label: IS_XCLAW ? "Токен" : "Token",
+              hint: IS_XCLAW ? "Рекомендуется (локально + удаленно)" : "Recommended default (local + remote)",
             },
-            { value: "password", label: "Password" },
+            { value: "password", label: IS_XCLAW ? "Пароль" : "Password" },
           ],
           initialValue: "token",
         })) as GatewayAuthChoice);
@@ -119,7 +122,7 @@ export async function configureGatewayForOnboarding(
     flow === "quickstart"
       ? quickstartGateway.tailscaleMode
       : await prompter.select<GatewayWizardSettings["tailscaleMode"]>({
-          message: "Tailscale exposure",
+          message: IS_XCLAW ? "Доступ через Tailscale" : "Tailscale exposure",
           options: [...TAILSCALE_EXPOSURE_OPTIONS],
         });
 
@@ -138,7 +141,7 @@ export async function configureGatewayForOnboarding(
     await prompter.note(TAILSCALE_DOCS_LINES.join("\n"), "Tailscale");
     tailscaleResetOnExit = Boolean(
       await prompter.confirm({
-        message: "Reset Tailscale serve/funnel on exit?",
+        message: IS_XCLAW ? "Сбросить Tailscale при выходе?" : "Reset Tailscale serve/funnel on exit?",
         initialValue: false,
       }),
     );
@@ -148,13 +151,21 @@ export async function configureGatewayForOnboarding(
   // - Tailscale wants bind=loopback so we never expose a non-loopback server + tailscale serve/funnel at once.
   // - Funnel requires password auth.
   if (tailscaleMode !== "off" && bind !== "loopback") {
-    await prompter.note("Tailscale requires bind=loopback. Adjusting bind to loopback.", "Note");
+    await prompter.note(
+      IS_XCLAW
+        ? "Tailscale требует привязку к loopback. Изменение привязки на loopback."
+        : "Tailscale requires bind=loopback. Adjusting bind to loopback.",
+      IS_XCLAW ? "Заметка" : "Note",
+    );
     bind = "loopback";
     customBindHost = undefined;
   }
 
   if (tailscaleMode === "funnel" && authMode !== "password") {
-    await prompter.note("Tailscale funnel requires password auth.", "Note");
+    await prompter.note(
+      IS_XCLAW ? "Tailscale funnel требует аутентификацию по паролю." : "Tailscale funnel requires password auth.",
+      IS_XCLAW ? "Заметка" : "Note",
+    );
     authMode = "password";
   }
 
@@ -167,8 +178,8 @@ export async function configureGatewayForOnboarding(
         randomToken();
     } else {
       const tokenInput = await prompter.text({
-        message: "Gateway token (blank to generate)",
-        placeholder: "Needed for multi-machine or non-loopback access",
+        message: IS_XCLAW ? "Токен шлюза (пусто для автогенерации)" : "Gateway token (blank to generate)",
+        placeholder: IS_XCLAW ? "Нужен для удаленного доступа" : "Needed for multi-machine or non-loopback access",
         initialValue:
           quickstartGateway.token ??
           normalizeGatewayTokenInput(process.env.OPENCLAW_GATEWAY_TOKEN) ??
@@ -183,7 +194,7 @@ export async function configureGatewayForOnboarding(
       flow === "quickstart" && quickstartGateway.password
         ? quickstartGateway.password
         : await prompter.text({
-            message: "Gateway password",
+            message: IS_XCLAW ? "Пароль шлюза" : "Gateway password",
             validate: validateGatewayPasswordInput,
           });
     nextConfig = {

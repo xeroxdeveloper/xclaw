@@ -26,6 +26,7 @@ import {
   applySessionDefaults,
   applyTalkConfigNormalization,
   applyTalkApiKey,
+  applyXClawDefaults,
 } from "./defaults.js";
 import { restoreEnvVarRefs } from "./env-preserve.js";
 import {
@@ -145,10 +146,15 @@ function hashConfigRaw(raw: string | null): string {
     .digest("hex");
 }
 
+import { IS_XCLAW_MODE } from "../xclaw/mode.js";
+
 function formatConfigValidationFailure(pathLabel: string, issueMessage: string): string {
   const match = issueMessage.match(OPEN_DM_POLICY_ALLOW_FROM_RE);
   const policyPath = match?.groups?.policyPath?.trim();
   const allowPath = match?.groups?.allowPath?.trim();
+  const IS_XCLAW = IS_XCLAW_MODE;
+  const cmd = IS_XCLAW ? "xlaw" : "openclaw";
+
   if (!policyPath || !allowPath) {
     return `Config validation failed: ${pathLabel}: ${issueMessage}`;
   }
@@ -159,10 +165,10 @@ function formatConfigValidationFailure(pathLabel: string, issueMessage: string):
     `Configuration mismatch: ${policyPath} is "open", but ${allowPath} does not include "*".`,
     "",
     "Fix with:",
-    `  openclaw config set ${allowPath} '["*"]'`,
+    `  ${cmd} config set ${allowPath} '["*"]'`,
     "",
     "Or switch policy:",
-    `  openclaw config set ${policyPath} "pairing"`,
+    `  ${cmd} config set ${policyPath} "pairing"`,
   ].join("\n");
 }
 
@@ -732,12 +738,14 @@ export function createConfigIO(overrides: ConfigIoDeps = {}) {
         deps.logger.warn(`Config warnings:\\n${details}`);
       }
       warnIfConfigFromFuture(validated.config, deps.logger);
-      const cfg = applyTalkConfigNormalization(
-        applyModelDefaults(
-          applyCompactionDefaults(
-            applyContextPruningDefaults(
-              applyAgentDefaults(
-                applySessionDefaults(applyLoggingDefaults(applyMessageDefaults(validated.config))),
+      const cfg = applyXClawDefaults(
+        applyTalkConfigNormalization(
+          applyModelDefaults(
+            applyCompactionDefaults(
+              applyContextPruningDefaults(
+                applyAgentDefaults(
+                  applySessionDefaults(applyLoggingDefaults(applyMessageDefaults(validated.config))),
+                ),
               ),
             ),
           ),
@@ -950,11 +958,13 @@ export function createConfigIO(overrides: ConfigIoDeps = {}) {
 
       warnIfConfigFromFuture(validated.config, deps.logger);
       const snapshotConfig = normalizeConfigPaths(
-        applyTalkApiKey(
-          applyTalkConfigNormalization(
-            applyModelDefaults(
-              applyAgentDefaults(
-                applySessionDefaults(applyLoggingDefaults(applyMessageDefaults(validated.config))),
+        applyXClawDefaults(
+          applyTalkApiKey(
+            applyTalkConfigNormalization(
+              applyModelDefaults(
+                applyAgentDefaults(
+                  applySessionDefaults(applyLoggingDefaults(applyMessageDefaults(validated.config))),
+                ),
               ),
             ),
           ),

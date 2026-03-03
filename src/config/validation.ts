@@ -18,7 +18,7 @@ import {
 import { isCanonicalDottedDecimalIPv4, isLoopbackIpAddress } from "../shared/net/ip.js";
 import { isRecord } from "../utils.js";
 import {
-  isXClawMode,
+  IS_XCLAW_MODE,
   resolveOnlyChannelsFromEnv,
   resolveOnlyModelProvidersFromEnv,
 } from "../xclaw/mode.js";
@@ -126,7 +126,7 @@ function resolveExplicitModelProvider(modelRef: string | undefined): string | nu
 }
 
 function validateXClawModeRestrictions(config: OpenClawConfig): ConfigValidationIssue[] {
-  if (!isXClawMode()) {
+  if (!IS_XCLAW_MODE) {
     return [];
   }
   const issues: ConfigValidationIssue[] = [];
@@ -164,11 +164,17 @@ function validateXClawModeRestrictions(config: OpenClawConfig): ConfigValidation
   if (!onlyProviders) {
     return issues;
   }
+  
+  // XClaw canonical providers (openai, gemini). Gemini models often use 'google' provider ID.
+  const effectiveOnlyProviders = new Set(Array.from(onlyProviders));
+  if (effectiveOnlyProviders.has("gemini")) {
+    effectiveOnlyProviders.add("google");
+  }
 
   const providers = config.models?.providers;
   if (isRecord(providers)) {
     for (const key of Object.keys(providers)) {
-      if (!onlyProviders.has(key.trim().toLowerCase())) {
+      if (!effectiveOnlyProviders.has(key.trim().toLowerCase())) {
         issues.push({
           path: `models.providers.${key}`,
           message: `xclaw mode allows only model providers: ${Array.from(onlyProviders).join(", ")}`,
@@ -182,7 +188,7 @@ function validateXClawModeRestrictions(config: OpenClawConfig): ConfigValidation
     if (!provider) {
       return;
     }
-    if (!onlyProviders.has(provider)) {
+    if (!effectiveOnlyProviders.has(provider)) {
       issues.push({
         path,
         message: `xclaw mode allows only model providers: ${Array.from(onlyProviders).join(", ")}`,

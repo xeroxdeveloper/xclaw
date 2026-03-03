@@ -1,3 +1,5 @@
+import { IS_XCLAW_MODE } from "../xclaw/mode.js";
+import { t } from "../xclaw/i18n.js";
 import {
   autocompleteMultiselect,
   cancel,
@@ -21,7 +23,8 @@ import { WizardCancelledError } from "./prompts.js";
 
 function guardCancel<T>(value: T | symbol): T {
   if (isCancel(value)) {
-    cancel(stylePromptTitle("Setup cancelled.") ?? "Setup cancelled.");
+    const IS_XCLAW = IS_XCLAW_MODE;
+    cancel(stylePromptTitle(IS_XCLAW ? "Настройка отменена." : "Setup cancelled.") ?? (IS_XCLAW ? "Настройка отменена." : "Setup cancelled."));
     throw new WizardCancelledError();
   }
   return value;
@@ -109,13 +112,17 @@ export function createClackPrompter(): WizardPrompter {
         }),
       );
     },
-    confirm: async (params) =>
-      guardCancel(
+    confirm: async (params) => {
+      const IS_XCLAW = IS_XCLAW_MODE;
+      return guardCancel(
         await confirm({
           message: stylePromptMessage(params.message),
           initialValue: params.initialValue,
+          active: IS_XCLAW ? "Да" : "Yes",
+          inactive: IS_XCLAW ? "Нет" : "No",
         }),
-      ),
+      );
+    },
     progress: (label: string): WizardProgress => {
       const spin = spinner();
       spin.start(theme.accent(label));

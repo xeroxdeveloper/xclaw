@@ -1,4 +1,5 @@
 import { formatCliCommand } from "../cli/command-format.js";
+import { IS_XCLAW_MODE } from "../xclaw/mode.js";
 import type {
   GatewayAuthChoice,
   OnboardMode,
@@ -27,7 +28,7 @@ async function requireRiskAcknowledgement(params: {
     return;
   }
 
-  const IS_XCLAW = isXClawMode();
+  const IS_XCLAW = IS_XCLAW_MODE;
   await params.prompter.note(
     IS_XCLAW
       ? [
@@ -86,10 +87,9 @@ async function requireRiskAcknowledgement(params: {
     IS_XCLAW ? "Безопасность" : "Security",
   );
 
+
   const ok = await params.prompter.confirm({
-    message: IS_XCLAW
-      ? "Я понимаю, что это персональный инструмент по умолчанию, и совместное использование требует защиты. Продолжить?"
-      : "I understand this is personal-by-default and shared/multi-user use requires lock-down. Continue?",
+    message: t("onboard.risk.message"),
     initialValue: false,
   });
   if (!ok) {
@@ -103,8 +103,7 @@ export async function runOnboardingWizard(
   prompter: WizardPrompter,
 ) {
   const onboardHelpers = await import("../commands/onboard-helpers.js");
-  const { isXClawMode } = await import("../xclaw/mode.js");
-  const IS_XCLAW = isXClawMode();
+  const IS_XCLAW = IS_XCLAW_MODE;
   onboardHelpers.printWizardHeader(runtime);
   await prompter.intro(IS_XCLAW ? "Настройка XClaw" : "OpenClaw onboarding");
   await requireRiskAcknowledgement({ opts, prompter });
@@ -113,24 +112,25 @@ export async function runOnboardingWizard(
   let baseConfig: OpenClawConfig = snapshot.valid ? snapshot.config : {};
 
   if (snapshot.exists && !snapshot.valid) {
+    const IS_XCLAW = IS_XCLAW_MODE;
     await prompter.note(
       onboardHelpers.summarizeExistingConfig(baseConfig),
-      IS_XCLAW ? "Невалидный конфиг" : "Invalid config",
+      t("onboard.invalid.config"),
     );
     if (snapshot.issues.length > 0) {
       await prompter.note(
         [
           ...snapshot.issues.map((iss) => `- ${iss.path}: ${iss.message}`),
           "",
-          "Docs: https://docs.openclaw.ai/gateway/configuration",
-        ].join("\n"),
-        IS_XCLAW ? "Проблемы конфига" : "Config issues",
+          IS_XCLAW ? "" : "Docs: https://docs.openclaw.ai/gateway/configuration",
+        ]
+          .filter((l) => l !== "")
+          .join("\n"),
+        t("onboard.config.issues"),
       );
     }
     await prompter.outro(
-      IS_XCLAW
-        ? `Конфиг невалиден. Запустите \`${formatCliCommand("xclaw doctor")}\` для исправления, затем повторите настройку.`
-        : `Config invalid. Run \`${formatCliCommand("openclaw doctor")}\` to repair it, then re-run onboarding.`,
+      t("onboard.config.invalid_outro", { cmd: formatCliCommand(IS_XCLAW ? "xclaw doctor" : "openclaw doctor") }),
     );
     runtime.exit(1);
     return;
@@ -185,14 +185,11 @@ export async function runOnboardingWizard(
     );
 
     const action = await prompter.select({
-      message: IS_XCLAW ? "Работа с конфигом" : "Config handling",
+      message: t("onboard.config.handling"),
       options: [
-        {
-          value: "keep",
-          label: IS_XCLAW ? "Использовать текущие значения" : "Use existing values",
-        },
-        { value: "modify", label: IS_XCLAW ? "Обновить значения" : "Update values" },
-        { value: "reset", label: IS_XCLAW ? "Сбросить" : "Reset" },
+        { value: "keep", label: t("onboard.config.keep") },
+        { value: "modify", label: t("onboard.config.modify") },
+        { value: "reset", label: t("onboard.config.reset") },
       ],
     });
 
@@ -200,18 +197,16 @@ export async function runOnboardingWizard(
       const workspaceDefault =
         baseConfig.agents?.defaults?.workspace ?? onboardHelpers.DEFAULT_WORKSPACE;
       const resetScope = (await prompter.select({
-        message: IS_XCLAW ? "Область сброса" : "Reset scope",
+        message: t("onboard.reset.scope"),
         options: [
-          { value: "config", label: IS_XCLAW ? "Только конфиг" : "Config only" },
+          { value: "config", label: t("onboard.reset.config") },
           {
             value: "config+creds+sessions",
-            label: IS_XCLAW ? "Конфиг + ключи + сессии" : "Config + creds + sessions",
+            label: t("onboard.reset.creds"),
           },
           {
             value: "full",
-            label: IS_XCLAW
-              ? "Полный сброс (все данные)"
-              : "Full reset (config + creds + sessions + workspace)",
+            label: t("onboard.reset.full"),
           },
         ],
       })) as ResetScope;
@@ -395,7 +390,7 @@ export async function runOnboardingWizard(
     (flow === "quickstart"
       ? (baseConfig.agents?.defaults?.workspace ?? onboardHelpers.DEFAULT_WORKSPACE)
       : await prompter.text({
-          message: IS_XCLAW ? "Рабочая директория" : "Workspace directory",
+          message: t("onboard.workspace.message"),
           initialValue: baseConfig.agents?.defaults?.workspace ?? onboardHelpers.DEFAULT_WORKSPACE,
         }));
 

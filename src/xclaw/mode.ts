@@ -1,14 +1,19 @@
-const XCLAW_MODE_ENV = "OPENCLAW_XCLAW_MODE";
-const XCLAW_PROFILE = "xclaw";
-const ONLY_CHANNELS_ENV = "OPENCLAW_ONLY_CHANNELS";
-const ONLY_MODEL_PROVIDERS_ENV = "OPENCLAW_ONLY_MODEL_PROVIDERS";
-const TELEGRAM_OWNER_IDS_ENV = "OPENCLAW_TELEGRAM_OWNER_IDS";
-const TELEGRAM_NATIVE_COMMANDS_ENV = "OPENCLAW_TELEGRAM_NATIVE_COMMANDS";
+function getIsXClaw(env: NodeJS.ProcessEnv): boolean {
+  const profile = (env.OPENCLAW_PROFILE ?? "").trim().toLowerCase();
+  const xclawMode = (env.OPENCLAW_XCLAW_MODE ?? "").trim().toLowerCase();
+  const isTruthy = (v: string) => ["true", "1", "yes", "on"].includes(v);
+  return profile === "xclaw" || isTruthy(xclawMode);
+}
 
-function isTruthyValue(value?: string): boolean {
-  if (!value) {return false;}
-  const normalized = value.trim().toLowerCase();
-  return ["true", "1", "yes", "on"].includes(normalized);
+/** Global flag for XClaw mode (using process.env). */
+export const IS_XCLAW_MODE = getIsXClaw(process.env);
+
+/** Check XClaw mode for a specific environment. */
+export function isXClawMode(env: NodeJS.ProcessEnv = process.env): boolean {
+  if (env === process.env) {
+    return IS_XCLAW_MODE;
+  }
+  return getIsXClaw(env);
 }
 
 function parseCsvSet(raw?: string): Set<string> {
@@ -20,17 +25,10 @@ function parseCsvSet(raw?: string): Set<string> {
   );
 }
 
-export function isXClawMode(env: NodeJS.ProcessEnv = process.env): boolean {
-  if (isTruthyValue(env[XCLAW_MODE_ENV])) {
-    return true;
-  }
-  return (env.OPENCLAW_PROFILE ?? "").trim().toLowerCase() === XCLAW_PROFILE;
-}
-
 export function resolveOnlyChannelsFromEnv(
   env: NodeJS.ProcessEnv = process.env,
 ): Set<string> | null {
-  const only = parseCsvSet(env[ONLY_CHANNELS_ENV]);
+  const only = parseCsvSet(env.OPENCLAW_ONLY_CHANNELS);
   if (only.size > 0) {
     return only;
   }
@@ -43,7 +41,7 @@ export function resolveOnlyChannelsFromEnv(
 export function resolveOnlyModelProvidersFromEnv(
   env: NodeJS.ProcessEnv = process.env,
 ): Set<string> | null {
-  const only = parseCsvSet(env[ONLY_MODEL_PROVIDERS_ENV]);
+  const only = parseCsvSet(env.OPENCLAW_ONLY_MODEL_PROVIDERS);
   if (only.size > 0) {
     return only;
   }
@@ -54,13 +52,13 @@ export function resolveOnlyModelProvidersFromEnv(
 }
 
 export function resolveTelegramOwnerIds(env: NodeJS.ProcessEnv = process.env): Set<string> {
-  return parseCsvSet(env[TELEGRAM_OWNER_IDS_ENV]);
+  return parseCsvSet(env.OPENCLAW_TELEGRAM_OWNER_IDS);
 }
 
 export function resolveTelegramNativeCommandAllowlist(
   env: NodeJS.ProcessEnv = process.env,
 ): Set<string> | null {
-  const only = parseCsvSet(env[TELEGRAM_NATIVE_COMMANDS_ENV]);
+  const only = parseCsvSet(env.OPENCLAW_TELEGRAM_NATIVE_COMMANDS);
   if (only.size > 0) {
     return only;
   }

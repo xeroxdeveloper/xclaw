@@ -1,6 +1,7 @@
 import { formatCliCommand } from "../cli/command-format.js";
 import { readConfigFileSnapshot } from "../config/config.js";
 import { assertSupportedRuntime } from "../infra/runtime-guard.js";
+import { IS_XCLAW_MODE } from "../xclaw/mode.js";
 import type { RuntimeEnv } from "../runtime.js";
 import { defaultRuntime } from "../runtime.js";
 import { resolveUserPath } from "../utils.js";
@@ -16,12 +17,18 @@ export async function onboardCommand(opts: OnboardOptions, runtime: RuntimeEnv =
   assertSupportedRuntime(runtime);
   const originalAuthChoice = opts.authChoice;
   const normalizedAuthChoice = normalizeLegacyOnboardAuthChoice(originalAuthChoice);
+  const IS_XCLAW = IS_XCLAW_MODE;
   if (opts.nonInteractive && isDeprecatedAuthChoice(originalAuthChoice)) {
     runtime.error(
-      [
-        `Auth choice "${String(originalAuthChoice)}" is deprecated.`,
-        'Use "--auth-choice token" (Anthropic setup-token) or "--auth-choice openai-codex".',
-      ].join("\n"),
+      IS_XCLAW
+        ? [
+            `Метод аутентификации "${String(originalAuthChoice)}" устарел.`,
+            'Используйте "--auth-choice gemini-api-key" или "--auth-choice openai-api-key".',
+          ].join("\n")
+        : [
+            `Auth choice "${String(originalAuthChoice)}" is deprecated.`,
+            'Use "--auth-choice token" (Anthropic setup-token) or "--auth-choice openai-codex".',
+          ].join("\n"),
     );
     runtime.exit(1);
     return;
@@ -42,24 +49,30 @@ export async function onboardCommand(opts: OnboardOptions, runtime: RuntimeEnv =
     normalizedOpts.secretInputMode !== "plaintext" &&
     normalizedOpts.secretInputMode !== "ref"
   ) {
-    runtime.error('Invalid --secret-input-mode. Use "plaintext" or "ref".');
+    runtime.error(IS_XCLAW ? 'Неверный --secret-input-mode. Используйте "plaintext" или "ref".' : 'Invalid --secret-input-mode. Use "plaintext" or "ref".');
     runtime.exit(1);
     return;
   }
 
   if (normalizedOpts.resetScope && !VALID_RESET_SCOPES.has(normalizedOpts.resetScope)) {
-    runtime.error('Invalid --reset-scope. Use "config", "config+creds+sessions", or "full".');
+    runtime.error(IS_XCLAW ? 'Неверный --reset-scope. Используйте "config", "config+creds+sessions", или "full".' : 'Invalid --reset-scope. Use "config", "config+creds+sessions", or "full".');
     runtime.exit(1);
     return;
   }
 
   if (normalizedOpts.nonInteractive && normalizedOpts.acceptRisk !== true) {
     runtime.error(
-      [
-        "Non-interactive onboarding requires explicit risk acknowledgement.",
-        "Read: https://docs.openclaw.ai/security",
-        `Re-run with: ${formatCliCommand("openclaw onboard --non-interactive --accept-risk ...")}`,
-      ].join("\n"),
+      IS_XCLAW
+        ? [
+            "Неинтерактивная настройка требует явного подтверждения рисков.",
+            "Документация: https://docs.openclaw.ai/security",
+            `Повторите с: ${formatCliCommand("xclaw onboard --non-interactive --accept-risk ...")}`,
+          ].join("\n")
+        : [
+            "Non-interactive onboarding requires explicit risk acknowledgement.",
+            "Read: https://docs.openclaw.ai/security",
+            `Re-run with: ${formatCliCommand("openclaw onboard --non-interactive --accept-risk ...")}`,
+          ].join("\n"),
     );
     runtime.exit(1);
     return;
@@ -76,12 +89,19 @@ export async function onboardCommand(opts: OnboardOptions, runtime: RuntimeEnv =
 
   if (process.platform === "win32") {
     runtime.log(
-      [
-        "Windows detected — OpenClaw runs great on WSL2!",
-        "Native Windows might be trickier.",
-        "Quick setup: wsl --install (one command, one reboot)",
-        "Guide: https://docs.openclaw.ai/windows",
-      ].join("\n"),
+      IS_XCLAW
+        ? [
+            "Обнаружена Windows — XClaw отлично работает на WSL2!",
+            "Обычная Windows может быть капризной.",
+            "Быстрая установка: wsl --install (одна команда, одна перезагрузка)",
+            "Гайд: https://docs.openclaw.ai/windows",
+          ].join("\n")
+        : [
+            "Windows detected — OpenClaw runs great on WSL2!",
+            "Native Windows might be trickier.",
+            "Quick setup: wsl --install (one command, one reboot)",
+            "Guide: https://docs.openclaw.ai/windows",
+          ].join("\n"),
     );
   }
 

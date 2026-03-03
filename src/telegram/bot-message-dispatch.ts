@@ -158,7 +158,7 @@ export const dispatchTelegramMessage = async ({
     statusReactionController,
   } = context;
 
-  const IS_XCLAW = isXClawMode();
+  const IS_XCLAW = IS_XCLAW_MODE;
   const xclawCfg = cfg.xclaw;
   
   if (IS_XCLAW && (xclawCfg?.reactionStatuses !== false)) {

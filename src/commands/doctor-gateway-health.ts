@@ -1,3 +1,4 @@
+import { IS_XCLAW_MODE } from "../xclaw/mode.js";
 import type { OpenClawConfig } from "../config/config.js";
 import { buildGatewayConnectionDetails, callGateway } from "../gateway/call.js";
 import type { DoctorMemoryStatusPayload } from "../gateway/server-methods/doctor.js";
@@ -27,9 +28,10 @@ export async function checkGatewayHealth(params: {
     healthOk = true;
   } catch (err) {
     const message = String(err);
+    const IS_XCLAW = IS_XCLAW_MODE;
     if (message.includes("gateway closed")) {
-      note("Gateway not running.", "Gateway");
-      note(gatewayDetails.message, "Gateway connection");
+      note(IS_XCLAW ? "Шлюз не запущен." : "Gateway not running.", IS_XCLAW ? "Шлюз" : "Gateway");
+      note(gatewayDetails.message, IS_XCLAW ? "Подключение к шлюзу" : "Gateway connection");
     } else {
       params.runtime.error(formatHealthCheckFailure(err));
     }
@@ -53,7 +55,7 @@ export async function checkGatewayHealth(params: {
                 }`,
             )
             .join("\n"),
-          "Channel warnings",
+          IS_XCLAW_MODE ? "Предупреждения каналов" : "Channel warnings",
         );
       }
     } catch {
@@ -83,10 +85,11 @@ export async function probeGatewayMemoryStatus(params: {
     };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
+    const IS_XCLAW = IS_XCLAW_MODE;
     return {
       checked: true,
       ready: false,
-      error: `gateway memory probe unavailable: ${message}`,
+      error: IS_XCLAW ? `проверка памяти шлюза недоступна: ${message}` : `gateway memory probe unavailable: ${message}`,
     };
   }
 }

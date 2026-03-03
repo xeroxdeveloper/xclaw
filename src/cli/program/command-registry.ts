@@ -218,7 +218,7 @@ const coreEntries: CoreCliEntry[] = [
     commands: [
       {
         name: "xupdate",
-        description: "Обновить XClaw до последней версии",
+        description: t("update.description"),
         hasSubcommands: false,
       },
     ],

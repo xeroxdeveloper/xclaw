@@ -9,6 +9,8 @@ import {
 } from "../secrets/ref-contract.js";
 import { resolveSecretRefString } from "../secrets/resolve.js";
 import type { WizardPrompter } from "../wizard/prompts.js";
+import { IS_XCLAW_MODE } from "../xclaw/mode.js";
+import { t } from "../xclaw/i18n.js";
 import { formatApiKeyPreview } from "./auth-choice.api-key.js";
 import type { ApplyAuthChoiceParams } from "./auth-choice.apply.js";
 import { applyDefaultModelChoice } from "./auth-choice.default-model.js";
@@ -247,8 +249,8 @@ export function createAuthChoiceAgentModelNoter(
       return;
     }
     await params.prompter.note(
-      `Default model set to ${model} for agent "${params.agentId}".`,
-      "Model configured",
+      t("model.configured.message", { model }),
+      t("model.configured.title"),
     );
   };
 }
@@ -338,18 +340,22 @@ export async function resolveSecretInputModeForEnvSelection(params: {
     return "plaintext";
   }
   const selected = await params.prompter.select<SecretInputMode>({
-    message: "How do you want to provide this API key?",
+    message: t("auth.api_key.how"),
     initialValue: "plaintext",
     options: [
       {
         value: "plaintext",
-        label: "Paste API key now",
-        hint: "Stores the key directly in OpenClaw config",
+        label: t("auth.api_key.paste"),
+        hint: IS_XCLAW_MODE
+          ? "Сохраняет ключ напрямую в конфиг xclaw"
+          : "Stores the key directly in OpenClaw config",
       },
       {
         value: "ref",
-        label: "Use secret reference",
-        hint: "Stores a reference to env or configured external secret providers",
+        label: IS_XCLAW_MODE ? "Использовать ссылку на секрет" : "Use secret reference",
+        hint: IS_XCLAW_MODE
+          ? "Использует переменную окружения или внешний провайдер"
+          : "Stores a reference to env or configured external secret providers",
       },
     ],
   });
@@ -460,7 +466,9 @@ export async function ensureApiKeyFromEnvOrPrompt(params: {
 
   if (envKey && selectedMode === "plaintext") {
     const useExisting = await params.prompter.confirm({
-      message: `Use existing ${params.envLabel} (${envKey.source}, ${formatApiKeyPreview(envKey.apiKey)})?`,
+      message: IS_XCLAW_MODE
+        ? `Использовать существующий ${params.envLabel} (${envKey.source}, ${formatApiKeyPreview(envKey.apiKey)})?`
+        : `Use existing ${params.envLabel} (${envKey.source}, ${formatApiKeyPreview(envKey.apiKey)})?`,
       initialValue: true,
     });
     if (useExisting) {
@@ -470,7 +478,7 @@ export async function ensureApiKeyFromEnvOrPrompt(params: {
   }
 
   const key = await params.prompter.text({
-    message: params.promptMessage,
+    message: t("auth.api_key.enter", { label: params.envLabel }),
     validate: params.validate,
   });
   const apiKey = params.normalize(String(key ?? ""));

@@ -30,7 +30,7 @@ import { MediaFetchError } from "../media/fetch.js";
 import { readChannelAllowFromStore } from "../pairing/pairing-store.js";
 import { resolveAgentRoute } from "../routing/resolve-route.js";
 import { resolveThreadSessionKeys } from "../routing/session-key.js";
-import { isXClawMode, resolveTelegramOwnerIds } from "../xclaw/mode.js";
+import { IS_XCLAW_MODE, resolveTelegramOwnerIds } from "../xclaw/mode.js";
 import { withTelegramApiErrorLogging } from "./api-logging.js";
 import {
   isSenderAllowed,
@@ -114,7 +114,7 @@ function isTelegramOwner(senderId: string, allowFrom?: Array<string | number>): 
   if (ownerIds.has(normalizedSenderId.toLowerCase())) {
     return true;
   }
-  if (!isXClawMode()) {
+  if (!IS_XCLAW_MODE) {
     return false;
   }
   const normalizedAllow = new Set(
@@ -266,7 +266,7 @@ export const registerTelegramHandlers = ({
       if (entries.length === 1) {
         const replyMedia = await resolveReplyMediaForMessage(last.ctx, last.msg);
 
-        const IS_XCLAW = isXClawMode();
+        const IS_XCLAW = IS_XCLAW_MODE;
         const senderId = last.msg.from?.id ? String(last.msg.from.id) : "";
         const isOwner = isTelegramOwner(senderId, allowFrom);
         const ownerOnly = IS_XCLAW && process.env.XCLAW_OWNER_ONLY === "1";
@@ -314,7 +314,7 @@ export const registerTelegramHandlers = ({
       const syntheticCtx = buildSyntheticContext(baseCtx, syntheticMessage);
       const replyMedia = await resolveReplyMediaForMessage(baseCtx, syntheticMessage);
 
-      const IS_XCLAW = isXClawMode();
+      const IS_XCLAW = IS_XCLAW_MODE;
       const senderId = last.msg.from?.id ? String(last.msg.from.id) : "";
       const isOwner = isTelegramOwner(senderId, allowFrom);
       const ownerOnly = IS_XCLAW && process.env.XCLAW_OWNER_ONLY === "1";

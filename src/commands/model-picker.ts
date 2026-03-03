@@ -12,6 +12,8 @@ import {
 import type { OpenClawConfig } from "../config/config.js";
 import { resolveAgentModelPrimaryValue } from "../config/model-input.js";
 import type { WizardPrompter, WizardSelectOption } from "../wizard/prompts.js";
+import { IS_XCLAW_MODE } from "../xclaw/mode.js";
+import { t } from "../xclaw/i18n.js";
 import { formatTokenK } from "./models/shared.js";
 import { OPENAI_CODEX_DEFAULT_MODEL } from "./openai-codex-model-default.js";
 import { promptAndConfigureVllm } from "./vllm-setup.js";
@@ -162,7 +164,11 @@ async function promptManualModel(params: {
   initialValue?: string;
 }): Promise<PromptDefaultModelResult> {
   const modelInput = await params.prompter.text({
-    message: params.allowBlank ? "Default model (blank to keep)" : "Default model",
+    message: params.allowBlank
+      ? IS_XCLAW_MODE
+        ? "Модель по умолчанию (оставьте пустым чтобы не менять)"
+        : "Default model (blank to keep)"
+      : t("model.default.message"),
     initialValue: params.initialValue,
     placeholder: "provider/model",
     validate: params.allowBlank ? undefined : (value) => (value?.trim() ? undefined : "Required"),
@@ -231,20 +237,23 @@ export async function promptDefaultModel(
     a.localeCompare(b),
   );
 
+  const IS_XCLAW = IS_XCLAW_MODE;
   const hasPreferredProvider = preferredProvider ? providers.includes(preferredProvider) : false;
   const shouldPromptProvider =
     !hasPreferredProvider && providers.length > 1 && models.length > PROVIDER_FILTER_THRESHOLD;
   if (shouldPromptProvider) {
     const selection = await params.prompter.select({
-      message: "Filter models by provider",
+      message: IS_XCLAW ? "Фильтр моделей по провайдеру" : "Filter models by provider",
       options: [
-        { value: "*", label: "All providers" },
+        { value: "*", label: IS_XCLAW ? "Все провайдеры" : "All providers" },
         ...providers.map((provider) => {
           const count = models.filter((entry) => entry.provider === provider).length;
           return {
             value: provider,
             label: provider,
-            hint: `${count} model${count === 1 ? "" : "s"}`,
+            hint: IS_XCLAW
+              ? `${count} модел${count === 1 ? "ь" : count < 5 ? "и" : "ей"}`
+              : `${count} model${count === 1 ? "" : "s"}`,
           };
         }),
       ],
@@ -277,14 +286,25 @@ export async function promptDefaultModel(
     options.push({
       value: KEEP_VALUE,
       label: configuredRaw
-        ? `Keep current (${configuredRaw})`
-        : `Keep current (default: ${resolvedKey})`,
+        ? IS_XCLAW
+          ? `Оставить текущую (${configuredRaw})`
+          : `Keep current (${configuredRaw})`
+        : IS_XCLAW
+          ? `Оставить текущую (по умолчанию: ${resolvedKey})`
+          : `Keep current (default: ${resolvedKey})`,
       hint:
-        configuredRaw && configuredRaw !== resolvedKey ? `resolves to ${resolvedKey}` : undefined,
+        configuredRaw && configuredRaw !== resolvedKey
+          ? IS_XCLAW
+            ? `будет ${resolvedKey}`
+            : `resolves to ${resolvedKey}`
+          : undefined,
     });
   }
   if (includeManual) {
-    options.push({ value: MANUAL_VALUE, label: "Enter model manually" });
+    options.push({
+      value: MANUAL_VALUE,
+      label: IS_XCLAW ? "Ввести модель вручную" : "Enter model manually",
+    });
   }
   if (includeVllm && agentDir) {
     options.push({
@@ -322,7 +342,7 @@ export async function promptDefaultModel(
   }
 
   const selection = await params.prompter.select({
-    message: params.message ?? "Default model",
+    message: params.message ?? t("model.default.message"),
     options,
     initialValue,
   });

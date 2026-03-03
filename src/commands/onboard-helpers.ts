@@ -26,24 +26,24 @@ import {
 } from "../utils.js";
 import { GATEWAY_CLIENT_MODES, GATEWAY_CLIENT_NAMES } from "../utils/message-channel.js";
 import { VERSION } from "../version.js";
-import { isXClawMode } from "../xclaw/mode.js";
+import { IS_XCLAW_MODE } from "../xclaw/mode.js";
 import type { NodeManagerChoice, OnboardMode, ResetScope } from "./onboard-types.js";
 
 export function guardCancel<T>(value: T | symbol, runtime: RuntimeEnv): T {
+  const IS_XCLAW = IS_XCLAW_MODE;
   if (isCancel(value)) {
-    const IS_XCLAW = isXClawMode();
     cancel(
       stylePromptTitle(IS_XCLAW ? "Настройка отменена." : "Setup cancelled.") ??
         (IS_XCLAW ? "Настройка отменена." : "Setup cancelled."),
     );
     runtime.exit(0);
-    throw new Error("unreachable");
+    return null as never;
   }
   return value;
 }
 
 export function summarizeExistingConfig(config: OpenClawConfig): string {
-  const IS_XCLAW = isXClawMode();
+  const IS_XCLAW = IS_XCLAW_MODE;
   const rows: string[] = [];
   const defaults = config.agents?.defaults;
   if (defaults?.workspace) {
@@ -90,8 +90,6 @@ export function normalizeGatewayTokenInput(value: unknown): string {
     return "";
   }
   const trimmed = value.trim();
-  // Reject the literal string "undefined" — a common bug when JS undefined
-  // gets coerced to a string via template literals or String(undefined).
   if (trimmed === "undefined" || trimmed === "null") {
     return "";
   }
@@ -113,18 +111,25 @@ export function validateGatewayPasswordInput(value: unknown): string | undefined
 }
 
 export function printWizardHeader(runtime: RuntimeEnv) {
-  const IS_XCLAW = isXClawMode();
+  const IS_XCLAW = IS_XCLAW_MODE;
   const header = [
     "▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄",
-    "██░▄▄▄░██░▄▄░██░▄▄▄██░▀██░██░▄▄▀██░████░▄▄▀██░███░██",
-    "██░███░██░▀▀░██░▄▄▄██░█░█░██░█████░████░▀▀░██░█░█░██",
-    "██░▀▀▀░██░█████░▀▀▀██░██▄░██░▀▀▄██░▀▀░█░██░██▄▀▄▀▄██",
+    "       .       ",
+    "      / \\      ",
+    "     /   \\     ",
+    "    /     \\    ",
+    "   <       >   ",
+    "    \\     /    ",
+    "     \\   /     ",
+    "      \\ /      ",
+    "       '       ",
     "▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀",
     IS_XCLAW
-      ? "                    🦞 XCLAW 🦞                     "
-      : "                  🦞 OPENCLAW 🦞                    ",
+      ? "                    💎 XCLAW 💎                     "
+      : "                  💎 OPENCLAW 💎                    ",
     " ",
   ].join("\n");
+
   runtime.log(header);
 }
 
@@ -146,24 +151,7 @@ export function applyWizardMetadata(
   };
 }
 
-type BrowserOpenSupport = {
-  ok: boolean;
-  reason?: string;
-  command?: string;
-};
-
-type BrowserOpenCommand = {
-  argv: string[] | null;
-  reason?: string;
-  command?: string;
-  /**
-   * Whether the URL must be wrapped in quotes when appended to argv.
-   * Needed for Windows `cmd /c start` where `&` splits commands.
-   */
-  quoteUrl?: boolean;
-};
-
-export async function resolveBrowserOpenCommand(): Promise<BrowserOpenCommand> {
+export async function resolveBrowserOpenCommand(): Promise<any> {
   const platform = process.platform;
   const hasDisplay = Boolean(process.env.DISPLAY || process.env.WAYLAND_DISPLAY);
   const isSsh =
@@ -211,7 +199,7 @@ export async function resolveBrowserOpenCommand(): Promise<BrowserOpenCommand> {
   return { argv: null, reason: "unsupported-platform" };
 }
 
-export async function detectBrowserOpenSupport(): Promise<BrowserOpenSupport> {
+export async function detectBrowserOpenSupport(): Promise<any> {
   const resolved = await resolveBrowserOpenCommand();
   if (!resolved.argv) {
     return { ok: false, reason: resolved.reason };
@@ -224,7 +212,7 @@ export function formatControlUiSshHint(params: {
   basePath?: string;
   token?: string;
 }): string {
-  const IS_XCLAW = isXClawMode();
+  const IS_XCLAW = IS_XCLAW_MODE;
   const basePath = normalizeControlUiBasePath(params.basePath);
   const uiPath = basePath ? `${basePath}/` : "/";
   const localUrl = `http://localhost:${params.port}${uiPath}`;
@@ -265,7 +253,6 @@ export async function openUrl(url: string): Promise<boolean> {
   const command = [...resolved.argv];
   if (quoteUrl) {
     if (command.at(-1) === "") {
-      // Preserve the empty title token for `start` when using verbatim args.
       command[command.length - 1] = '""';
     }
     command.push(`"${url}"`);
@@ -279,7 +266,6 @@ export async function openUrl(url: string): Promise<boolean> {
     });
     return true;
   } catch {
-    // ignore; we still print the URL for manual open
     return false;
   }
 }
@@ -425,11 +411,8 @@ export async function waitForGatewayReachable(params: {
   url: string;
   token?: string;
   password?: string;
-  /** Total time to wait before giving up. */
   deadlineMs?: number;
-  /** Per-probe timeout (each probe makes a full gateway health request). */
   probeTimeoutMs?: number;
-  /** Delay between probes. */
   pollMs?: number;
 }): Promise<{ ok: boolean; detail?: string }> {
   const deadlineMs = params.deadlineMs ?? 15_000;

@@ -11,15 +11,15 @@ import { isTruthyEnvValue, normalizeEnv, registerSecretForMasking } from "./infr
 import { isMainModule } from "./infra/is-main.js";
 import { installProcessWarningFilter } from "./infra/warning-filter.js";
 import { attachChildProcessBridge } from "./process/child-process-bridge.js";
-import { isXClawMode } from "./xclaw/mode.js";
+import { IS_XCLAW_MODE } from "./xclaw/mode.js";
 
 const ENTRY_WRAPPER_PAIRS = [
   { wrapperBasename: "openclaw.mjs", entryBasename: "entry.js" },
   { wrapperBasename: "openclaw.js", entryBasename: "entry.js" },
   { wrapperBasename: "xclaw.mjs", entryBasename: "entry.js" },
-  { wrapperBasename: "xlaw", entryBasename: "entry.js" },
   { wrapperBasename: "xclaw", entryBasename: "entry.js" },
 ] as const;
+
 
 function shouldForceReadOnlyAuthStore(argv: string[]): boolean {
   const tokens = argv.slice(2).filter((token) => token.length > 0 && !token.startsWith("-"));
@@ -39,8 +39,8 @@ if (
 ) {
   // Imported as a dependency
 } else {
-  const IS_XCLAW = isXClawMode();
-  const CLI_TITLE = IS_XCLAW ? "xlaw" : "openclaw";
+  const IS_XCLAW = IS_XCLAW_MODE;
+  const CLI_TITLE = IS_XCLAW ? "xclaw" : "openclaw";
   process.title = CLI_TITLE;
   
   if (process.env.TELEGRAM_BOT_TOKEN) {

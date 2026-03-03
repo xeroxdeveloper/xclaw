@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { DEFAULT_BOOTSTRAP_FILENAME } from "../agents/workspace.js";
 import { formatCliCommand } from "../cli/command-format.js";
-import { isXClawMode } from "../xclaw/mode.js";
+import { IS_XCLAW_MODE } from "../xclaw/mode.js";
 import {
   buildGatewayInstallPlan,
   gatewayInstallErrorHint,
@@ -49,8 +49,10 @@ export async function finalizeOnboardingWizard(
   options: FinalizeOnboardingOptions,
 ): Promise<{ launchedTui: boolean }> {
   const { flow, opts, baseConfig, nextConfig, settings, prompter, runtime } = options;
+  const IS_XCLAW = IS_XCLAW_MODE;
 
   const withWizardProgress = async <T>(
+
     label: string,
     options: { doneMessage?: string },
     work: (progress: { update: (message: string) => void }) => Promise<T>,
@@ -67,7 +69,9 @@ export async function finalizeOnboardingWizard(
     process.platform === "linux" ? await isSystemdUserServiceAvailable() : true;
   if (process.platform === "linux" && !systemdAvailable) {
     await prompter.note(
-      "Systemd user services are unavailable. Skipping lingering checks and service install.",
+      IS_XCLAW
+        ? "Пользовательские службы Systemd недоступны. Пропуск установки службы."
+        : "Systemd user services are unavailable. Skipping lingering checks and service install.",
       "Systemd",
     );
   }
@@ -97,7 +101,7 @@ export async function finalizeOnboardingWizard(
     installDaemon = true;
   } else {
     installDaemon = await prompter.confirm({
-      message: "Install Gateway service (recommended)",
+      message: IS_XCLAW ? "Установить службу шлюза (рекомендуется)" : "Install Gateway service (recommended)",
       initialValue: true,
     });
   }
@@ -229,19 +233,25 @@ export async function finalizeOnboardingWizard(
   if (!opts.skipUi && controlUiEnabled) {
     const controlUiAssets = await ensureControlUiAssetsBuilt(runtime);
     if (!controlUiAssets.ok && controlUiAssets.message) {
-      runtime.error(controlUiAssets.message);
+      const buildCmd = "pnpm ui:build";
+      runtime.error(
+        IS_XCLAW
+          ? `Отсутствуют файлы веб-интерфейса. Соберите их командой \`${buildCmd}\`.`
+          : controlUiAssets.message,
+      );
     }
   }
 
-  await prompter.note(
-    [
-      "Add nodes for extra features:",
-      "- macOS app (system + notifications)",
-      "- iOS app (camera/canvas)",
-      "- Android app (camera/canvas)",
-    ].join("\n"),
-    "Optional apps",
-  );
+    await prompter.note(
+      [
+        IS_XCLAW ? "Добавьте узлы для дополнительных функций:" : "Add nodes for extra features:",
+        IS_XCLAW ? "- Приложение macOS (система + уведомления)" : "- macOS app (system + notifications)",
+        IS_XCLAW ? "- Приложение iOS (камера/холст)" : "- iOS app (camera/canvas)",
+        IS_XCLAW ? "- Приложение Android (камера/холст)" : "- Android app (camera/canvas)",
+      ].join("\n"),
+      IS_XCLAW ? "Дополнительные приложения" : "Optional apps",
+    );
+
 
   const controlUiBasePath =
     nextConfig.gateway?.controlUi?.basePath ?? baseConfig.gateway?.controlUi?.basePath;
@@ -261,8 +271,8 @@ export async function finalizeOnboardingWizard(
     password: settings.authMode === "password" ? nextConfig.gateway?.auth?.password : "",
   });
   const gatewayStatusLine = gatewayProbe.ok
-    ? "Gateway: reachable"
-    : `Gateway: not detected${gatewayProbe.detail ? ` (${gatewayProbe.detail})` : ""}`;
+    ? (IS_XCLAW ? "Шлюз: доступен" : "Gateway: reachable")
+    : (IS_XCLAW ? `Шлюз: не обнаружен${gatewayProbe.detail ? ` (${gatewayProbe.detail})` : ""}` : `Gateway: not detected${gatewayProbe.detail ? ` (${gatewayProbe.detail})` : ""}`);
   const bootstrapPath = path.join(
     resolveUserPath(options.workspaceDir),
     DEFAULT_BOOTSTRAP_FILENAME,
@@ -272,20 +282,21 @@ export async function finalizeOnboardingWizard(
     .then(() => true)
     .catch(() => false);
 
-  await prompter.note(
-    [
-      `Web UI: ${links.httpUrl}`,
-      settings.authMode === "token" && settings.gatewayToken
-        ? `Web UI (with token): ${authedUrl}`
-        : undefined,
-      `Gateway WS: ${links.wsUrl}`,
-      gatewayStatusLine,
-      "Docs: https://docs.openclaw.ai/web/control-ui",
-    ]
-      .filter(Boolean)
-      .join("\n"),
-    "Control UI",
-  );
+    await prompter.note(
+      [
+        IS_XCLAW ? `Web UI: ${links.httpUrl}` : `Web UI: ${links.httpUrl}`,
+        settings.authMode === "token" && settings.gatewayToken
+          ? (IS_XCLAW ? `Web UI (с токеном): ${authedUrl}` : `Web UI (with token): ${authedUrl}`)
+          : undefined,
+        `Gateway WS: ${links.wsUrl}`,
+        gatewayStatusLine,
+        IS_XCLAW ? "" : "Docs: https://docs.openclaw.ai/web/control-ui",
+      ]
+        .filter((l) => l !== "" && l !== undefined)
+        .join("\n"),
+      IS_XCLAW ? "Интерфейс управления" : "Control UI",
+    );
+
 
   let controlUiOpened = false;
   let controlUiOpenHint: string | undefined;
@@ -294,19 +305,18 @@ export async function finalizeOnboardingWizard(
   let launchedTui = false;
 
   if (!opts.skipUi && gatewayProbe.ok) {
-    if (hasBootstrap) {
-      await prompter.note(
-        [
-          "This is the defining action that makes your agent you.",
-          "Please take your time.",
-          "The more you tell it, the better the experience will be.",
-          'We will send: "Wake up, my friend!"',
-        ].join("\n"),
-        "Start TUI (best option!)",
-      );
-    }
+    const cmd = IS_XCLAW ? "xclaw" : "openclaw";
 
-    const IS_XCLAW = isXClawMode();
+    await prompter.note(
+      [
+        IS_XCLAW ? "Это определяющее действие, которое делает вашего агента личностью." : "This is the defining action that makes your agent you.",
+        IS_XCLAW ? "Пожалуйста, не торопитесь." : "Please take your time.",
+        IS_XCLAW ? "Чем больше вы ему расскажете, тем лучше будет опыт общения." : "The more you tell it, the better the experience will be.",
+        IS_XCLAW ? 'Мы отправим: "Проснись, мой друг!"' : 'We will send: "Wake up, my friend!"',
+      ].join("\n"),
+      IS_XCLAW ? "Запуск TUI (лучший вариант!)" : "Start TUI (best option!)",
+    );
+
     const dirname = IS_XCLAW ? ".xclaw" : ".openclaw";
     const filename = IS_XCLAW ? "xclaw.json" : "openclaw.json";
     const envVar = IS_XCLAW ? "XCLAW_GATEWAY_TOKEN" : "OPENCLAW_GATEWAY_TOKEN";
@@ -325,11 +335,11 @@ export async function finalizeOnboardingWizard(
     );
 
     hatchChoice = await prompter.select({
-      message: "How do you want to hatch your bot?",
+      message: IS_XCLAW ? "Как вы хотите активировать вашего бота?" : "How do you want to hatch your bot?",
       options: [
-        { value: "tui", label: "Hatch in TUI (recommended)" },
-        { value: "web", label: "Open the Web UI" },
-        { value: "later", label: "Do this later" },
+        { value: "tui", label: IS_XCLAW ? "Активировать в TUI (рекомендуется)" : "Hatch in TUI (recommended)" },
+        { value: "web", label: IS_XCLAW ? "Открыть Web UI" : "Open the Web UI" },
+        { value: "later", label: IS_XCLAW ? "Сделать это позже" : "Do this later" },
       ],
       initialValue: "tui",
     });
@@ -342,7 +352,7 @@ export async function finalizeOnboardingWizard(
         password: settings.authMode === "password" ? nextConfig.gateway?.auth?.password : "",
         // Safety: onboarding TUI should not auto-deliver to lastProvider/lastTo.
         deliver: false,
-        message: hasBootstrap ? "Wake up, my friend!" : undefined,
+        message: hasBootstrap ? (IS_XCLAW ? "Проснись, мой друг!" : "Wake up, my friend!") : undefined,
       });
       launchedTui = true;
     } else if (hatchChoice === "web") {
@@ -365,37 +375,46 @@ export async function finalizeOnboardingWizard(
       }
       await prompter.note(
         [
-          `Dashboard link (with token): ${authedUrl}`,
+          IS_XCLAW ? `Ссылка на панель (с токеном): ${authedUrl}` : `Dashboard link (with token): ${authedUrl}`,
           controlUiOpened
-            ? "Opened in your browser. Keep that tab to control OpenClaw."
-            : "Copy/paste this URL in a browser on this machine to control OpenClaw.",
+            ? (IS_XCLAW ? "Открыто в вашем браузере. Используйте эту вкладку для управления XClaw." : "Opened in your browser. Keep that tab to control OpenClaw.")
+            : (IS_XCLAW ? "Скопируйте/вставьте этот URL в браузер для управления XClaw." : "Copy/paste this URL in a browser on this machine to control OpenClaw."),
           controlUiOpenHint,
         ]
           .filter(Boolean)
           .join("\n"),
-        "Dashboard ready",
+        IS_XCLAW ? "Панель готова" : "Dashboard ready",
       );
     } else {
       await prompter.note(
-        `When you're ready: ${formatCliCommand("openclaw dashboard --no-open")}`,
-        "Later",
+        IS_XCLAW
+          ? `Когда будете готовы: ${formatCliCommand("xclaw dashboard --no-open")}`
+          : `When you're ready: ${formatCliCommand("openclaw dashboard --no-open")}`,
+        IS_XCLAW ? "Позже" : "Later",
       );
     }
   } else if (opts.skipUi) {
-    await prompter.note("Skipping Control UI/TUI prompts.", "Control UI");
+    await prompter.note(
+      IS_XCLAW ? "Пропуск настройки UI." : "Skipping Control UI/TUI prompts.",
+      "Control UI",
+    );
   }
 
   await prompter.note(
     [
-      "Back up your agent workspace.",
-      "Docs: https://docs.openclaw.ai/concepts/agent-workspace",
-    ].join("\n"),
-    "Workspace backup",
+      IS_XCLAW ? "Сделайте бэкап рабочей области агента." : "Back up your agent workspace.",
+      IS_XCLAW ? "" : "Docs: https://docs.openclaw.ai/concepts/agent-workspace",
+    ]
+      .filter((l) => l !== "")
+      .join("\n"),
+    IS_XCLAW ? "Бэкап" : "Workspace backup",
   );
 
   await prompter.note(
-    "Running agents on your computer is risky — harden your setup: https://docs.openclaw.ai/security",
-    "Security",
+    IS_XCLAW
+      ? "Запуск агентов на вашем компьютере связан с рисками — защитите вашу систему: https://docs.openclaw.ai/security"
+      : "Running agents on your computer is risky — harden your setup: https://docs.openclaw.ai/security",
+    IS_XCLAW ? "Безопасность" : "Security",
   );
 
   await setupOnboardingShellCompletion({ flow, prompter });
@@ -426,15 +445,15 @@ export async function finalizeOnboardingWizard(
 
     await prompter.note(
       [
-        `Dashboard link (with token): ${authedUrl}`,
+        IS_XCLAW ? `Ссылка на панель (с токеном): ${authedUrl}` : `Dashboard link (with token): ${authedUrl}`,
         controlUiOpened
-          ? "Opened in your browser. Keep that tab to control OpenClaw."
-          : "Copy/paste this URL in a browser on this machine to control OpenClaw.",
+          ? (IS_XCLAW ? "Открыто в вашем браузере. Используйте эту вкладку для управления XClaw." : "Opened in your browser. Keep that tab to control OpenClaw.")
+          : (IS_XCLAW ? "Скопируйте/вставьте этот URL в браузер для управления XClaw." : "Copy/paste this URL in a browser on this machine to control OpenClaw."),
         controlUiOpenHint,
       ]
         .filter(Boolean)
         .join("\n"),
-      "Dashboard ready",
+      IS_XCLAW ? "Панель готова" : "Dashboard ready",
     );
   }
 
@@ -444,39 +463,43 @@ export async function finalizeOnboardingWizard(
   await prompter.note(
     hasWebSearchKey
       ? [
-          "Web search is enabled, so your agent can look things up online when needed.",
+          IS_XCLAW ? "Поиск в сети включен, ваш агент может искать информацию онлайн." : "Web search is enabled, so your agent can look things up online when needed.",
           "",
           webSearchKey
-            ? "API key: stored in config (tools.web.search.apiKey)."
-            : "API key: provided via BRAVE_API_KEY env var (Gateway environment).",
-          "Docs: https://docs.openclaw.ai/tools/web",
-        ].join("\n")
+            ? (IS_XCLAW ? "API ключ: сохранен в конфиге (tools.web.search.apiKey)." : "API key: stored in config (tools.web.search.apiKey).")
+            : (IS_XCLAW ? "API ключ: используется переменная BRAVE_API_KEY." : "API key: provided via BRAVE_API_KEY env var (Gateway environment)."),
+          IS_XCLAW ? "" : "Docs: https://docs.openclaw.ai/tools/web",
+        ]
+          .filter((l) => l !== "")
+          .join("\n")
       : [
-          "If you want your agent to be able to search the web, you’ll need an API key.",
+          IS_XCLAW ? "Если вы хотите, чтобы агент искал в сети, нужен API ключ." : "If you want your agent to be able to search the web, you’ll need an API key.",
           "",
-          "OpenClaw uses Brave Search for the `web_search` tool. Without a Brave Search API key, web search won’t work.",
+          IS_XCLAW ? "XClaw использует Brave Search. Без ключа поиск работать не будет." : "OpenClaw uses Brave Search for the `web_search` tool. Without a Brave Search API key, web search won’t work.",
           "",
-          "Set it up interactively:",
-          `- Run: ${formatCliCommand("openclaw configure --section web")}`,
-          "- Enable web_search and paste your Brave Search API key",
+          IS_XCLAW ? "Настройте интерактивно:" : "Set it up interactively:",
+          `- Запустите: ${formatCliCommand(`${IS_XCLAW ? "xclaw" : "openclaw"} configure --section web`)}`,
+          IS_XCLAW ? "- Включите web_search и вставьте ваш Brave Search API ключ" : "- Enable web_search and paste your Brave Search API key",
           "",
-          "Alternative: set BRAVE_API_KEY in the Gateway environment (no config changes).",
-          "Docs: https://docs.openclaw.ai/tools/web",
-        ].join("\n"),
-    "Web search (optional)",
+          IS_XCLAW ? "Альтернатива: установите BRAVE_API_KEY в переменные окружения." : "Alternative: set BRAVE_API_KEY in the Gateway environment (no config changes).",
+          IS_XCLAW ? "" : "Docs: https://docs.openclaw.ai/tools/web",
+        ]
+          .filter((l) => l !== "")
+          .join("\n"),
+    IS_XCLAW ? "Поиск в сети (опционально)" : "Web search (optional)",
   );
 
   await prompter.note(
-    'What now: https://openclaw.ai/showcase ("What People Are Building").',
-    "What now",
+    IS_XCLAW ? "Что дальше: https://openclaw.ai/showcase" : 'What now: https://openclaw.ai/showcase ("What People Are Building").',
+    IS_XCLAW ? "Что дальше" : "What now",
   );
 
   await prompter.outro(
     controlUiOpened
-      ? "Onboarding complete. Dashboard opened; keep that tab to control OpenClaw."
+      ? (IS_XCLAW ? "Настройка завершена. Панель управления открыта." : "Onboarding complete. Dashboard opened; keep that tab to control OpenClaw.")
       : seededInBackground
-        ? "Onboarding complete. Web UI seeded in the background; open it anytime with the dashboard link above."
-        : "Onboarding complete. Use the dashboard link above to control OpenClaw.",
+        ? (IS_XCLAW ? "Настройка завершена. Web UI готов к работе." : "Onboarding complete. Web UI seeded in the background; open it anytime with the dashboard link above.")
+        : (IS_XCLAW ? "Настройка завершена. Используйте ссылку выше для управления XClaw." : "Onboarding complete. Use the dashboard link above to control OpenClaw."),
   );
 
   return { launchedTui };

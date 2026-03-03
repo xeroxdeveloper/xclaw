@@ -8,7 +8,7 @@ import {
 } from "../../../telegram/accounts.js";
 import { formatDocsLink } from "../../../terminal/links.js";
 import type { WizardPrompter } from "../../../wizard/prompts.js";
-import { isXClawMode } from "../../../xclaw/mode.js";
+import { IS_XCLAW_MODE } from "../../../xclaw/mode.js";
 import { fetchTelegramChatId } from "../../telegram/api.js";
 import type { ChannelOnboardingAdapter, ChannelOnboardingDmPolicy } from "../onboarding-types.js";
 import {
@@ -26,7 +26,7 @@ import {
 const channel = "telegram" as const;
 
 async function noteTelegramTokenHelp(prompter: WizardPrompter): Promise<void> {
-  const IS_XCLAW = isXClawMode();
+  const IS_XCLAW = IS_XCLAW_MODE;
   await prompter.note(
     IS_XCLAW
       ? [
@@ -48,7 +48,7 @@ async function noteTelegramTokenHelp(prompter: WizardPrompter): Promise<void> {
 }
 
 async function noteTelegramUserIdHelp(prompter: WizardPrompter): Promise<void> {
-  const IS_XCLAW = isXClawMode();
+  const IS_XCLAW = IS_XCLAW_MODE;
   await prompter.note(
     IS_XCLAW
       ? [
@@ -89,7 +89,7 @@ async function promptTelegramAllowFrom(params: {
   const existingAllowFrom = resolved.config.allowFrom ?? [];
   await noteTelegramUserIdHelp(prompter);
 
-  const IS_XCLAW = isXClawMode();
+  const IS_XCLAW = IS_XCLAW_MODE;
   const token = resolved.token;
   if (!token && !IS_XCLAW) {
     await prompter.note("Telegram token missing; username lookup is unavailable.", "Telegram");
@@ -156,7 +156,7 @@ async function promptTelegramAllowFromForAccount(params: {
 }
 
 const dmPolicy: ChannelOnboardingDmPolicy = {
-  label: isXClawMode() ? "Telegram ЛС" : "Telegram",
+  label: IS_XCLAW_MODE ? "Telegram ЛС" : "Telegram",
   channel,
   policyKey: "channels.telegram.dmPolicy",
   allowFromKey: "channels.telegram.allowFrom",
@@ -173,7 +173,7 @@ const dmPolicy: ChannelOnboardingDmPolicy = {
 export const telegramOnboardingAdapter: ChannelOnboardingAdapter = {
   channel,
   getStatus: async ({ cfg }) => {
-    const IS_XCLAW = isXClawMode();
+    const IS_XCLAW = IS_XCLAW_MODE;
     const configured = listTelegramAccountIds(cfg).some((accountId) =>
       Boolean(resolveTelegramAccount({ cfg, accountId }).token),
     );
@@ -200,7 +200,7 @@ export const telegramOnboardingAdapter: ChannelOnboardingAdapter = {
     shouldPromptAccountIds,
     forceAllowFrom,
   }) => {
-    const IS_XCLAW = isXClawMode();
+    const IS_XCLAW = IS_XCLAW_MODE;
     const defaultTelegramAccountId = resolveDefaultTelegramAccountId(cfg);
     const telegramAccountId = await resolveAccountIdForConfigure({
       cfg,

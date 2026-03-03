@@ -31,7 +31,7 @@ const CHAT_CHANNEL_META: Record<ChatChannelId, ChannelMeta> = {
     detailLabel: "Telegram Bot",
     docsPath: "/channels/telegram",
     docsLabel: "telegram",
-    blurb: "simplest way to get started — register a bot with @BotFather and get going.",
+    blurb: "самый простой способ начать — зарегистрируйте бота у @BotFather и вперед.",
     systemImage: "paperplane",
     selectionDocsPrefix: "",
     selectionDocsOmitLabel: true,
@@ -44,7 +44,7 @@ const CHAT_CHANNEL_META: Record<ChatChannelId, ChannelMeta> = {
     detailLabel: "WhatsApp Web",
     docsPath: "/channels/whatsapp",
     docsLabel: "whatsapp",
-    blurb: "works with your own number; recommend a separate phone + eSIM.",
+    blurb: "работает с вашим номером; рекомендуем отдельный телефон + eSIM.",
     systemImage: "message",
   },
   discord: {
@@ -54,7 +54,7 @@ const CHAT_CHANNEL_META: Record<ChatChannelId, ChannelMeta> = {
     detailLabel: "Discord Bot",
     docsPath: "/channels/discord",
     docsLabel: "discord",
-    blurb: "very well supported right now.",
+    blurb: "отличная поддержка прямо сейчас.",
     systemImage: "bubble.left.and.bubble.right",
   },
   irc: {
@@ -64,7 +64,7 @@ const CHAT_CHANNEL_META: Record<ChatChannelId, ChannelMeta> = {
     detailLabel: "IRC",
     docsPath: "/channels/irc",
     docsLabel: "irc",
-    blurb: "classic IRC networks with DM/channel routing and pairing controls.",
+    blurb: "классические IRC сети с маршрутизацией ЛС/каналов.",
     systemImage: "network",
   },
   googlechat: {
@@ -74,7 +74,7 @@ const CHAT_CHANNEL_META: Record<ChatChannelId, ChannelMeta> = {
     detailLabel: "Google Chat",
     docsPath: "/channels/googlechat",
     docsLabel: "googlechat",
-    blurb: "Google Workspace Chat app with HTTP webhook.",
+    blurb: "приложение Google Workspace Chat с HTTP вебхуком.",
     systemImage: "message.badge",
   },
   slack: {
@@ -84,7 +84,7 @@ const CHAT_CHANNEL_META: Record<ChatChannelId, ChannelMeta> = {
     detailLabel: "Slack Bot",
     docsPath: "/channels/slack",
     docsLabel: "slack",
-    blurb: "supported (Socket Mode).",
+    blurb: "поддерживается (Socket Mode).",
     systemImage: "number",
   },
   signal: {
@@ -94,7 +94,7 @@ const CHAT_CHANNEL_META: Record<ChatChannelId, ChannelMeta> = {
     detailLabel: "Signal REST",
     docsPath: "/channels/signal",
     docsLabel: "signal",
-    blurb: 'signal-cli linked device; more setup (David Reagans: "Hop on Discord.").',
+    blurb: "связанное устройство signal-cli; сложная настройка.",
     systemImage: "antenna.radiowaves.left.and.right",
   },
   imessage: {
@@ -104,7 +104,7 @@ const CHAT_CHANNEL_META: Record<ChatChannelId, ChannelMeta> = {
     detailLabel: "iMessage",
     docsPath: "/channels/imessage",
     docsLabel: "imessage",
-    blurb: "this is still a work in progress.",
+    blurb: "в процессе разработки.",
     systemImage: "message.fill",
   },
 };

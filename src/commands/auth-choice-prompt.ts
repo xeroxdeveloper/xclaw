@@ -26,7 +26,11 @@ export async function promptAuthChoiceGrouped(params: {
 
     const providerSelection = (await params.prompter.select({
       message: t("auth.choice.message"),
-      options: providerOptions,
+      options: providerOptions.map((opt) => ({
+        ...opt,
+        // @ts-ignore: custom property for prompter
+        disabled: opt.value === "no-api",
+      })),
     })) as string;
 
     if (providerSelection === "skip") {

@@ -5,7 +5,7 @@ import { pathExists } from "../utils.js";
 
 const FALLBACK_TEMPLATE_DIR = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
-  "../../docs/reference/templates",
+  "../docs/reference/templates",
 );
 
 let cachedTemplateDir: string | undefined;
@@ -36,7 +36,14 @@ export async function resolveWorkspaceTemplateDir(opts?: {
     ].filter(Boolean) as string[];
 
     for (const candidate of candidates) {
-      if (await pathExists(candidate)) {
+      if (candidate && await pathExists(path.join(candidate, "AGENTS.md"))) {
+        cachedTemplateDir = candidate;
+        return candidate;
+      }
+    }
+
+    for (const candidate of candidates) {
+      if (candidate && await pathExists(candidate)) {
         cachedTemplateDir = candidate;
         return candidate;
       }
