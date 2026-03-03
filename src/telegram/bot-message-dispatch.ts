@@ -473,184 +473,88 @@ export const dispatchTelegramMessage = async ({
     },
   });
 
+  const dispatcherOptions: ReplyDispatcherWithTypingOptions = {
+    ...prefixOptions,
+    typingCallbacks,
+    deliver: async (payload, info) => {
+      const previewButtonsBase = (
+        payload.channelData?.telegram as { buttons?: TelegramInlineButtons } | undefined
+      )?.buttons;
+
+      const previewButtons: TelegramInlineButtons | undefined = (IS_XCLAW_MODE && info.kind !== "final")
+        ? [[{ text: "🛑 СТОП", callback_data: "/stop" }], ...(previewButtonsBase ?? [])]
+        : previewButtonsBase;
+      const split = splitTextIntoLaneSegments(payload.text);
+      const segments = split.segments;
+
+      const flushBufferedFinalAnswer = async () => {
+        const buffered = reasoningStepState.takeBufferedFinalAnswer();
+        if (!buffered) {
+          return;
+        }
+        const bufferedButtons = (
+          buffered.payload.channelData?.telegram as
+            | { buttons?: TelegramInlineButtons }
+            | undefined
+        )?.buttons;
+        await deliverLaneText({
+          laneName: "answer",
+          text: buffered.text,
+          payload: buffered.payload,
+          infoKind: "final",
+          previewButtons: bufferedButtons,
+        });
+        reasoningStepState.resetForNextStep();
+      };
+
+      for (const segment of segments) {
+        if (
+          segment.lane === "answer" &&
+          info.kind === "final" &&
+          reasoningStepState.shouldBufferFinalAnswer()
+        ) {
+          reasoningStepState.bufferFinalAnswer({ payload, text: segment.text });
+          continue;
+        }
+        if (segment.lane === "reasoning") {
+          reasoningStepState.noteReasoningHint();
+        }
+        const result = await deliverLaneText({
+          laneName: segment.lane,
+          text: segment.text,
+          payload,
+          infoKind: info.kind,
+          previewButtons,
+          allowPreviewUpdateForNonFinal: segment.lane === "reasoning",
+        });
+        if (segment.lane === "reasoning") {
+          if (result !== "skipped") {
+            reasoningStepState.noteReasoningDelivered();
+            await flushBufferedFinalAnswer();
+          }
+          continue;
+        }
+        if (info.kind === "final") {
+          if (reasoningLane.hasStreamedMessage) {
+            finalizedPreviewByLane.reasoning = true;
+          }
+          reasoningStepState.resetForNextStep();
+        }
+      }
+      if (segments.length > 0) {
+        deliveryState.markDelivered();
+      }
+    },
+  };
+
   try {
     ({ queuedFinal } = await dispatchReplyWithBufferedBlockDispatcher({
       ctx: ctxPayload,
       cfg,
-      dispatcherOptions: {
-        ...prefixOptions,
-        typingCallbacks,
-        deliver: async (payload, info) => {
-          const previewButtonsBase = (
-            payload.channelData?.telegram as { buttons?: TelegramInlineButtons } | undefined
-          )?.buttons;
-
-          const previewButtons: TelegramInlineButtons | undefined = (IS_XCLAW_MODE && info.kind !== "final")
-            ? [[{ text: "🛑 СТОП", callback_data: "/stop" }], ...(previewButtonsBase ?? [])]
-            : previewButtonsBase;
-          const split = splitTextIntoLaneSegments(payload.text);
-          const segments = split.segments;
-          const hasMedia = Boolean(payload.mediaUrl) || (payload.mediaUrls?.length ?? 0) > 0;
-
-          const flushBufferedFinalAnswer = async () => {
-            const buffered = reasoningStepState.takeBufferedFinalAnswer();
-            if (!buffered) {
-              return;
-            }
-            const bufferedButtons = (
-              buffered.payload.channelData?.telegram as
-                | { buttons?: TelegramInlineButtons }
-                | undefined
-            )?.buttons;
-            await deliverLaneText({
-              laneName: "answer",
-              text: buffered.text,
-              payload: buffered.payload,
-              infoKind: "final",
-              previewButtons: bufferedButtons,
-            });
-            reasoningStepState.resetForNextStep();
-          };
-
-          for (const segment of segments) {
-            if (
-              segment.lane === "answer" &&
-              info.kind === "final" &&
-              reasoningStepState.shouldBufferFinalAnswer()
-            ) {
-              reasoningStepState.bufferFinalAnswer({ payload, text: segment.text });
-              continue;
-            }
-            if (segment.lane === "reasoning") {
-              reasoningStepState.noteReasoningHint();
-            }
-            const result = await deliverLaneText({
-              laneName: segment.lane,
-              text: segment.text,
-              payload,
-              infoKind: info.kind,
-              previewButtons,
-              allowPreviewUpdateForNonFinal: segment.lane === "reasoning",
-            });
-            if (segment.lane === "reasoning") {
-              if (result !== "skipped") {
-                reasoningStepState.noteReasoningDelivered();
-                await flushBufferedFinalAnswer();
-              }
-              continue;
-            }
-            if (info.kind === "final") {
-              if (reasoningLane.hasStreamedMessage) {
-                finalizedPreviewByLane.reasoning = true;
-              }
-              reasoningStepState.resetForNextStep();
-            }
-          }
-          if (segments.length > 0) {
-            return;
-          }
-          if (split.suppressedReasoningOnly) {
-            if (hasMedia) {
-              const payloadWithoutSuppressedReasoning =
-                typeof payload.text === "string" ? { ...payload, text: "" } : payload;
-              await sendPayload(payloadWithoutSuppressedReasoning);
-            }
-            if (info.kind === "final") {
-              await flushBufferedFinalAnswer();
-            }
-            return;
-          }
-
-          if (info.kind === "final") {
-            await answerLane.stream?.stop();
-            await reasoningLane.stream?.stop();
-            reasoningStepState.resetForNextStep();
-          }
-          const canSendAsIs =
-            hasMedia || (typeof payload.text === "string" && payload.text.length > 0);
-          if (!canSendAsIs) {
-            if (info.kind === "final") {
-              await flushBufferedFinalAnswer();
-            }
-            return;
-          }
-          await sendPayload(payload);
-          if (info.kind === "final") {
-            await flushBufferedFinalAnswer();
-          }
-        },
-        onSkip: (_payload, info) => {
-          if (info.reason !== "silent") {
-            deliveryState.markNonSilentSkip();
-          }
-        },
-        onError: (err, info) => {
-          deliveryState.markNonSilentFailure();
-          runtime.error?.(danger(`telegram ${info.kind} reply failed: ${String(err)}`));
-        },
-      },
-      replyOptions: {
-        skillFilter,
-        disableBlockStreaming,
-        onPartialReply:
-          answerLane.stream || reasoningLane.stream
-            ? (payload) => ingestDraftLaneSegments(payload.text)
-            : undefined,
-        onReasoningStream: reasoningLane.stream
-          ? (payload) => {
-              // Split between reasoning blocks only when the next reasoning
-              // stream starts. Splitting at reasoning-end can orphan the active
-              // preview and cause duplicate reasoning sends on reasoning final.
-              if (splitReasoningOnNextStream) {
-                reasoningLane.stream?.forceNewMessage();
-                resetDraftLaneState(reasoningLane);
-                splitReasoningOnNextStream = false;
-              }
-              ingestDraftLaneSegments(payload.text);
-            }
-          : undefined,
-        onAssistantMessageStart: answerLane.stream
-          ? async () => {
-              reasoningStepState.resetForNextStep();
-              if (answerLane.hasStreamedMessage) {
-                const previewMessageId = answerLane.stream?.messageId();
-                // Only archive previews that still need a matching final text update.
-                // Once a preview has already been finalized, archiving it here causes
-                // cleanup to delete a user-visible final message on later media-only turns.
-                if (typeof previewMessageId === "number" && !finalizedPreviewByLane.answer) {
-                  archivedAnswerPreviews.push({
-                    messageId: previewMessageId,
-                    textSnapshot: answerLane.lastPartialText,
-                  });
-                }
-                answerLane.stream?.forceNewMessage();
-              }
-              resetDraftLaneState(answerLane);
-              // New assistant message boundary: this lane now tracks a fresh preview lifecycle.
-              finalizedPreviewByLane.answer = false;
-            }
-          : undefined,
-        onReasoningEnd: reasoningLane.stream
-          ? () => {
-              // Split when/if a later reasoning block begins.
-              splitReasoningOnNextStream = reasoningLane.hasStreamedMessage;
-            }
-          : undefined,
-        onToolStart: statusReactionController
-          ? async (payload) => {
-              if (IS_XCLAW_MODE && (cfg.xclaw?.loadingIndicator !== false)) {
-                if (payload.name.includes("image") || payload.name.includes("dalle")) {
-                  await sendChatActionHandler.sendChatAction(chatId, "upload_photo", threadSpec);
-                } else if (payload.name.includes("fetch") || payload.name.includes("browser")) {
-                  await sendChatActionHandler.sendChatAction(chatId, "find_location", threadSpec);
-                }
-              }
-              await statusReactionController?.setTool(payload.name).catch(() => {});
-            }
-          : undefined,
-        onModelSelected,
-      },
+      dispatcherOptions,
+      replyResolver: opts.replyResolver,
     }));
+
     
     if (IS_XCLAW_MODE && (cfg.xclaw?.reactionStatuses !== false)) {
       void statusReactionController?.setDone().catch(() => {});
